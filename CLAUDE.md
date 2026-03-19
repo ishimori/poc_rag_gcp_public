@@ -7,7 +7,7 @@
 - **フロー**: full（9ステップ）
 - **DDフォルダ**: `doc/DD/`
 - **アーカイブ**: `doc/archived/DD/`
-- **テンプレート**: `templates/dd_template.md`
+- **テンプレート**: `doc/templates/dd_template.md`
 
 ## 利用可能なスキル
 

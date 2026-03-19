@@ -1,0 +1,62 @@
+site_name: エンタープライズRAG完全攻略
+site_description: GCP上でのRAG構築リサーチドキュメント
+docs_dir: doc/research
+
+theme:
+  name: material
+  language: ja
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: ダークモードに切替
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: ライトモードに切替
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+
+nav:
+  - はじめに: 00_全体構想.md
+  - フェーズ1 データの基盤と加工:
+    - 第1回 データ前処理: 01_データ前処理.md
+    - 補足 コスト試算: 01-2_コスト.md
+    - 第2回 チャンキング戦略: 02_チャンキング戦略.md
+    - 補足 チャンク調整: 02-2_チャンク調整.md
+  - フェーズ2 検索技術の深掘り:
+    - 第3回 セマンティック検索: 03_セマンティック検索.md
+    - 補足 検索エンジン深堀: 03-2_深堀.md
+    - 第4回 リランキング: 04_リランキング.md
+  - フェーズ3 AIの振る舞い:
+    - 第5回 Genkit: 05_Genkit.md
+    - 第6回 セキュリティ: 06_セキュリティ.md
+  - フェーズ4 運用・評価・UX:
+    - 第7回 評価: 07_評価.md
+    - 第8回 UI/UX: 08_UIUX.md
+
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.arithmatex:
+      generic: true
+  - admonition
+  - pymdownx.details
+
+extra_javascript:
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
