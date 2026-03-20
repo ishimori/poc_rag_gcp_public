@@ -9,18 +9,23 @@ from src.config import config
 from src.search.retriever import SearchResult, vector_search
 from src.search.reranker import rerank
 
-_model: GenerativeModel | None = None
+_models: dict[str, GenerativeModel] = {}
+_vertexai_initialized = False
 
 
-def _get_model() -> GenerativeModel:
-    global _model
-    if _model is None:
+def _get_model(model_name: str | None = None) -> GenerativeModel:
+    global _vertexai_initialized
+    if not _vertexai_initialized:
         vertexai.init(project=config.project_id, location=config.location)
-        _model = GenerativeModel(
-            config.llm_model,
+        _vertexai_initialized = True
+
+    name = model_name or config.llm_model
+    if name not in _models:
+        _models[name] = GenerativeModel(
+            name,
             generation_config={"temperature": 0.1, "max_output_tokens": 2048},
         )
-    return _model
+    return _models[name]
 
 
 @dataclass
@@ -31,7 +36,7 @@ class RAGResponse:
     query: str
 
 
-def rag_flow(query: str) -> RAGResponse:
+def rag_flow(query: str, model_name: str | None = None) -> RAGResponse:
     """RAG Flow: 検索 → リランキング → 回答生成"""
     # Step 1: ベクトル検索
     search_results = vector_search(query)
@@ -45,7 +50,7 @@ def rag_flow(query: str) -> RAGResponse:
     context = "\n\n---\n\n".join(r.content for r in reranked_results)
 
     # Step 4: LLMで回答生成
-    answer = _generate_answer(query, context)
+    answer = _generate_answer(query, context, model_name)
 
     return RAGResponse(
         answer=answer,
@@ -55,9 +60,9 @@ def rag_flow(query: str) -> RAGResponse:
     )
 
 
-def _generate_answer(query: str, context: str) -> str:
+def _generate_answer(query: str, context: str, model_name: str | None = None) -> str:
     """Vertex AI Gemini で回答を生成する"""
-    model = _get_model()
+    model = _get_model(model_name)
 
     prompt = f"""あなたは社内ドキュメントに基づいて質問に回答するアシスタントです。
 

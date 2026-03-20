@@ -34,7 +34,8 @@ def chat(req: https_fn.Request) -> https_fn.Response:
                                  content_type="application/json")
 
     query = body["query"]
-    result = rag_flow(query)
+    model = body.get("model")
+    result = rag_flow(query, model_name=model)
 
     response_data = {
         "answer": result.answer,

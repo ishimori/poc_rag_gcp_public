@@ -38,9 +38,78 @@
 }
 
 .sidebar h3 {
-  margin: 0 0 12px;
+  margin: 0 0 8px;
   font-size: 0.9rem;
   color: #333;
+}
+
+.sidebar-hint {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  color: #999;
+}
+
+.sidebar-divider {
+  border-top: 1px solid #e0e0e0;
+  margin: 16px 0;
+}
+
+/* Model selector */
+.model-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.model-option:hover {
+  background: #f0f4ff;
+}
+
+.model-option.selected {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.model-option input[type="radio"] {
+  margin-top: 2px;
+}
+
+.model-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model-name {
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.model-tier {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.tier-最安 { background: #e6f4ea; color: #1e7e34; }
+.tier-低コスト { background: #e8f0fe; color: #1a73e8; }
+.tier-高性能 { background: #fef7e0; color: #b06000; }
+.tier-最高性能 { background: #fce8e6; color: #c5221f; }
+
+.model-price {
+  font-size: 0.72rem;
+  color: #888;
 }
 
 .sample-btn {
@@ -113,6 +182,14 @@
 .message-content.loading {
   color: #888;
   font-style: italic;
+}
+
+.message-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: #999;
 }
 
 /* Sources */

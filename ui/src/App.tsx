@@ -14,7 +14,36 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   sources?: Source[]
+  elapsedMs?: number
+  model?: string
 }
+
+const MODELS = [
+  {
+    id: 'gemini-3.1-flash-lite-preview',
+    label: 'Gemini 3.1 Flash Lite',
+    price: '$0.10 / $0.40',
+    tier: '最安',
+  },
+  {
+    id: 'gemini-3-flash-preview',
+    label: 'Gemini 3 Flash',
+    price: '$0.50 / $3.00',
+    tier: '低コスト',
+  },
+  {
+    id: 'gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro',
+    price: '$1.25 / $10.00',
+    tier: '高性能',
+  },
+  {
+    id: 'gemini-3.1-pro-preview',
+    label: 'Gemini 3.1 Pro',
+    price: '$2.00 / $12.00',
+    tier: '最高性能',
+  },
+]
 
 const SAMPLE_QUESTIONS = [
   'ネジ999999の材質は？',
@@ -27,6 +56,7 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [selectedModel, setSelectedModel] = useState(MODELS[0].id)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -41,26 +71,35 @@ export default function App() {
     setInput('')
     setLoading(true)
 
+    const startTime = performance.now()
+
     try {
       const res = await fetch('/api', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, model: selectedModel }),
       })
 
       if (!res.ok) throw new Error(`API error: ${res.status}`)
 
       const data = await res.json()
+      const elapsedMs = Math.round(performance.now() - startTime)
+      const modelInfo = MODELS.find((m) => m.id === selectedModel)
+
       const assistantMsg: Message = {
         role: 'assistant',
         content: data.answer,
         sources: data.sources,
+        elapsedMs,
+        model: modelInfo?.label,
       }
       setMessages((prev) => [...prev, assistantMsg])
     } catch (e) {
+      const elapsedMs = Math.round(performance.now() - startTime)
       const errorMsg: Message = {
         role: 'assistant',
         content: `エラーが発生しました: ${e instanceof Error ? e.message : '不明なエラー'}`,
+        elapsedMs,
       }
       setMessages((prev) => [...prev, errorMsg])
     } finally {
@@ -77,6 +116,31 @@ export default function App() {
 
       <div className="main">
         <aside className="sidebar">
+          <h3>モデル選択</h3>
+          <p className="sidebar-hint">入力 / 出力（per 1M tokens）</p>
+          {MODELS.map((m) => (
+            <label
+              key={m.id}
+              className={`model-option ${selectedModel === m.id ? 'selected' : ''}`}
+            >
+              <input
+                type="radio"
+                name="model"
+                value={m.id}
+                checked={selectedModel === m.id}
+                onChange={() => setSelectedModel(m.id)}
+                disabled={loading}
+              />
+              <div className="model-info">
+                <span className="model-name">{m.label}</span>
+                <span className={`model-tier tier-${m.tier}`}>{m.tier}</span>
+                <span className="model-price">{m.price}</span>
+              </div>
+            </label>
+          ))}
+
+          <div className="sidebar-divider" />
+
           <h3>質問の例</h3>
           {SAMPLE_QUESTIONS.map((q, i) => (
             <button
@@ -98,6 +162,12 @@ export default function App() {
             {messages.map((msg, i) => (
               <div key={i} className={`message ${msg.role}`}>
                 <div className="message-content">{msg.content}</div>
+                {msg.role === 'assistant' && (msg.elapsedMs || msg.model) && (
+                  <div className="message-meta">
+                    {msg.model && <span>{msg.model}</span>}
+                    {msg.elapsedMs != null && <span>{formatElapsed(msg.elapsedMs)}</span>}
+                  </div>
+                )}
                 {msg.sources && msg.sources.length > 0 && (
                   <SourceList sources={msg.sources} />
                 )}
@@ -133,6 +203,11 @@ export default function App() {
       </div>
     </div>
   )
+}
+
+function formatElapsed(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}秒`
 }
 
 function SourceList({ sources }: { sources: Source[] }) {
