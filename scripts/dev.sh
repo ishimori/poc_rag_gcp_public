@@ -11,6 +11,7 @@ cd "$(dirname "$0")/.."
 
 PIDFILE=".dev-pids"
 API_PORT="${API_PORT:-8081}"
+ADMIN_PORT="${ADMIN_PORT:-8082}"
 UI_PORT="${UI_PORT:-5180}"
 
 stop() {
@@ -34,9 +35,13 @@ start() {
     stop
   fi
 
-  echo "Starting backend (port $API_PORT)..."
+  echo "Starting chat backend (port $API_PORT)..."
   uv run functions-framework --target=chat --port="$API_PORT" --source=main.py &
   API_PID=$!
+
+  echo "Starting admin backend (port $ADMIN_PORT)..."
+  uv run functions-framework --target=admin --port="$ADMIN_PORT" --source=main.py &
+  ADMIN_PID=$!
 
   echo "Starting frontend (port $UI_PORT)..."
   cd ui && npm run dev -- --port "$UI_PORT" &
@@ -44,12 +49,14 @@ start() {
   cd ..
 
   echo "$API_PID" > "$PIDFILE"
+  echo "$ADMIN_PID" >> "$PIDFILE"
   echo "$UI_PID" >> "$PIDFILE"
 
   echo ""
   echo "=== Dev servers running ==="
   echo "  Frontend: http://localhost:$UI_PORT"
-  echo "  Backend:  http://localhost:$API_PORT"
+  echo "  Chat API: http://localhost:$API_PORT"
+  echo "  Admin API: http://localhost:$ADMIN_PORT"
   echo ""
   echo "Stop with: bash scripts/dev.sh stop"
   echo "==========================="
