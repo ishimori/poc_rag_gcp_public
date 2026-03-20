@@ -1,60 +1,366 @@
 """Cloud Functions for Firebase — RAG API エントリポイント"""
 
+import json
+import os
 import sys
+import time
+from dataclasses import asdict
 from pathlib import Path
 
 # プロジェクトルートを sys.path に追加（src/ のインポート用）
 sys.path.insert(0, Path(__file__).parent.as_posix())
 
-from dataclasses import asdict
-
 from firebase_functions import https_fn, options
+from google.cloud import firestore
 
 from src.search.flow import rag_flow
 
+NO_ANSWER_MARKER = "記載がありません"
+
+_firestore_client = None
+
+
+def _get_firestore_client() -> firestore.Client:
+    global _firestore_client
+    if _firestore_client is None:
+        _firestore_client = firestore.Client()
+    return _firestore_client
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_CORS = options.CorsOptions(
+    cors_origins=["http://localhost:5180"],
+    cors_methods=["GET", "POST", "PUT"],
+)
+
+
+def _json_response(data: dict | list, status: int = 200) -> https_fn.Response:
+    return https_fn.Response(
+        response=json.dumps(data, ensure_ascii=False),
+        status=status,
+        content_type="application/json",
+    )
+
+
+def _error(msg: str, status: int = 400) -> https_fn.Response:
+    return _json_response({"error": msg}, status)
+
+
+# ---------------------------------------------------------------------------
+# Query logging
+# ---------------------------------------------------------------------------
+
+def _save_query_log(
+    query: str,
+    answer: str,
+    model: str | None,
+    elapsed_ms: int,
+    sources: list[dict],
+) -> None:
+    """クエリログを Firestore query_logs コレクションに保存する"""
+    try:
+        db = _get_firestore_client()
+        db.collection("query_logs").add({
+            "query": query,
+            "answer": answer,
+            "model": model or "",
+            "elapsed_ms": elapsed_ms,
+            "sources": [s.get("source_file", "") for s in sources],
+            "source_count": len(sources),
+            "no_answer": NO_ANSWER_MARKER in answer,
+            "timestamp": firestore.SERVER_TIMESTAMP,
+        })
+    except Exception as e:
+        print(f"  [QueryLog] Failed to save log: {e}")
+
+
+# ---------------------------------------------------------------------------
+# chat — RAG チャット API
+# ---------------------------------------------------------------------------
 
 @https_fn.on_request(
     region="asia-northeast1",
     memory=options.MemoryOption.GB_1,
     timeout_sec=120,
     min_instances=0,
-    cors=options.CorsOptions(
-        cors_origins=["http://localhost:5180"],
-        cors_methods=["GET", "POST"],
-    ),
+    cors=_CORS,
 )
 def chat(req: https_fn.Request) -> https_fn.Response:
     """RAG チャット API"""
     if req.method != "POST":
-        return https_fn.Response("Method not allowed", status=405)
+        return _error("Method not allowed", 405)
 
     body = req.get_json(force=True, silent=True)
     if not body or "query" not in body:
-        return https_fn.Response('{"error": "query is required"}', status=400,
-                                 content_type="application/json")
+        return _error("query is required")
 
     query = body["query"]
     model = body.get("model")
+
+    start_time = time.monotonic()
     result = rag_flow(query, model_name=model)
+    elapsed_ms = int((time.monotonic() - start_time) * 1000)
+
+    sources = [
+        {
+            "content": s.content,
+            "score": s.score,
+            "source_file": s.source_file,
+            "chunk_index": s.chunk_index,
+            "category": s.category,
+            "security_level": s.security_level,
+        }
+        for s in result.reranked_sources
+    ]
 
     response_data = {
         "answer": result.answer,
         "query": result.query,
-        "sources": [
-            {
-                "content": s.content,
-                "score": s.score,
-                "source_file": s.source_file,
-                "chunk_index": s.chunk_index,
-                "category": s.category,
-                "security_level": s.security_level,
-            }
-            for s in result.reranked_sources
-        ],
+        "sources": sources,
     }
 
-    return https_fn.Response(
-        response=__import__("json").dumps(response_data, ensure_ascii=False),
-        status=200,
-        content_type="application/json",
+    _save_query_log(query, result.answer, model, elapsed_ms, sources)
+
+    return _json_response(response_data)
+
+
+# ---------------------------------------------------------------------------
+# admin — 管理系 API（パスベースルーティング）
+# ---------------------------------------------------------------------------
+
+@https_fn.on_request(
+    region="asia-northeast1",
+    memory=options.MemoryOption.GB_1,
+    timeout_sec=540,
+    min_instances=0,
+    cors=_CORS,
+)
+def admin(req: https_fn.Request) -> https_fn.Response:
+    """管理系 API — パスベースルーティング"""
+    path = req.path.rstrip("/")
+    method = req.method
+
+    if path == "/ingest" and method == "POST":
+        return _handle_ingest(req)
+    if path == "/evaluate" and method == "POST":
+        return _handle_evaluate(req)
+    if path == "/evaluate/results" and method == "GET":
+        return _handle_evaluate_results(req)
+    if path == "/config" and method == "GET":
+        return _handle_config_get(req)
+    if path == "/config" and method == "PUT":
+        return _handle_config_put(req)
+    if path == "/chunks" and method == "GET":
+        return _handle_chunks(req)
+
+    return _error(f"Not found: {method} {path}", 404)
+
+
+# --- Ingest ---
+
+def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
+    """POST /ingest — インジェスト実行"""
+    from src.config import config
+    from src.ingest.chunker import chunk_document
+    from src.ingest.embedder import embed_texts
+    from src.ingest.store import store_chunks, clear_collection
+
+    body = req.get_json(force=True, silent=True) or {}
+    should_clear = body.get("clear", False)
+
+    sources_dir = "test-data/sources"
+
+    deleted = clear_collection() if should_clear else 0
+
+    files = sorted(f for f in os.listdir(sources_dir) if f.endswith(".md"))
+
+    total_chunks = 0
+    total_stored = 0
+    total_skipped = 0
+    file_results = []
+
+    for file_name in files:
+        file_path = os.path.join(sources_dir, file_name)
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+
+        chunks = chunk_document(text, file_name)
+        texts = [c.content for c in chunks]
+        embeddings = embed_texts(texts)
+        result = store_chunks(chunks, embeddings)
+
+        total_chunks += len(chunks)
+        total_stored += result["stored"]
+        total_skipped += result["skipped"]
+        file_results.append({
+            "file": file_name,
+            "chunks": len(chunks),
+            "stored": result["stored"],
+            "skipped": result["skipped"],
+        })
+
+    return _json_response({
+        "cleared": deleted,
+        "files": len(files),
+        "total_chunks": total_chunks,
+        "stored": total_stored,
+        "skipped": total_skipped,
+        "details": file_results,
+    })
+
+
+# --- Evaluate ---
+
+def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
+    """POST /evaluate — 評価実行"""
+    from src.evaluate.scorer import EvalCase
+    from src.evaluate.runner import run_evaluation
+    from src.evaluate.reporter import generate_report, save_report
+
+    eval_dataset = "test-data/golden/eval_dataset.jsonl"
+
+    with open(eval_dataset, "r", encoding="utf-8") as f:
+        lines = [line.strip() for line in f if line.strip()]
+
+    cases = []
+    for line in lines:
+        data = json.loads(line)
+        cases.append(
+            EvalCase(
+                id=data["id"],
+                query=data["query"],
+                expected_answer=data["expected_answer"],
+                expected_keywords=data["expected_keywords"],
+                type=data["type"],
+                category=data["category"],
+            )
+        )
+
+    results = run_evaluation(cases)
+    report = generate_report(results)
+    file_path = save_report(report)
+
+    return _json_response({
+        "report": asdict(report),
+        "saved_to": file_path,
+    })
+
+
+def _handle_evaluate_results(req: https_fn.Request) -> https_fn.Response:
+    """GET /evaluate/results — 評価結果一覧取得"""
+    from src.config import config
+
+    results_dir = config.results_dir
+    if not os.path.isdir(results_dir):
+        return _json_response([])
+
+    files = sorted(
+        (f for f in os.listdir(results_dir)
+         if f.startswith("eval_") and f.endswith(".json")),
+        reverse=True,
     )
+
+    results = []
+    for fname in files:
+        fpath = os.path.join(results_dir, fname)
+        with open(fpath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        results.append({
+            "file": fname,
+            "date": data.get("date", ""),
+            "config_params": data.get("config_params", {}),
+            "overall": data.get("overall", {}),
+            "score_by_type": data.get("score_by_type", {}),
+        })
+
+    return _json_response(results)
+
+
+# --- Config ---
+
+_TUNABLE_PARAMS: dict[str, type] = {
+    "chunk_size": int,
+    "chunk_overlap": int,
+    "top_k": int,
+    "rerank_top_n": int,
+    "rerank_threshold": float,
+}
+
+
+def _handle_config_get(req: https_fn.Request) -> https_fn.Response:
+    """GET /config — 現在のパラメータ取得"""
+    from src.config import config
+
+    return _json_response({k: getattr(config, k) for k in _TUNABLE_PARAMS})
+
+
+def _handle_config_put(req: https_fn.Request) -> https_fn.Response:
+    """PUT /config — パラメータ更新（ランタイムのみ、再デプロイで戻る）"""
+    from src.config import config
+
+    body = req.get_json(force=True, silent=True)
+    if not body:
+        return _error("JSON body required")
+
+    updated = {}
+    errors = []
+    for key, value in body.items():
+        if key not in _TUNABLE_PARAMS:
+            errors.append(f"Unknown parameter: {key}")
+            continue
+        try:
+            typed_value = _TUNABLE_PARAMS[key](value)
+            setattr(config, key, typed_value)
+            updated[key] = typed_value
+        except (ValueError, TypeError) as e:
+            errors.append(f"Invalid value for {key}: {e}")
+
+    result: dict = {"updated": updated}
+    if errors:
+        result["errors"] = errors
+
+    return _json_response(result)
+
+
+# --- Chunks ---
+
+def _handle_chunks(req: https_fn.Request) -> https_fn.Response:
+    """GET /chunks — チャンク一覧取得（embedding除外）"""
+    from src.config import config
+
+    db = _get_firestore_client()
+    collection = db.collection(config.collection_name)
+
+    # フィルタ構築
+    query = collection
+    category = req.args.get("category")
+    if category:
+        query = query.where("category", "==", category)
+    security_level = req.args.get("security_level")
+    if security_level:
+        query = query.where("security_level", "==", security_level)
+
+    query = query.order_by("source_file").order_by("chunk_index")
+
+    limit = min(int(req.args.get("limit", "200")), 500)
+    offset = int(req.args.get("offset", "0"))
+
+    docs = list(query.limit(limit + offset).get())
+    docs = docs[offset:]
+
+    chunks = []
+    for doc in docs[:limit]:
+        data = doc.to_dict() or {}
+        data.pop("embedding", None)
+        data["id"] = doc.id
+        content = data.get("content", "")
+        data["content_preview"] = content[:50] + ("..." if len(content) > 50 else "")
+        chunks.append(data)
+
+    return _json_response({
+        "chunks": chunks,
+        "count": len(chunks),
+    })
