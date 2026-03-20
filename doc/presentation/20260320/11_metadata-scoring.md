@@ -71,4 +71,6 @@
 - 権限フィルタリング（#08）とは目的が異なり、両方を併用するのが正しい設計
 - 既存のFirestoreメタデータを活用でき、少量のコード追加で実装可能
 
-[← 概要に戻る](00_project-overview.md)
+---
+
+[← 10. 文脈付与](10_contextual-retrieval.md) | [📋 概要](00_project-overview.md) | [12. Self-Query →](12_self-query.md)

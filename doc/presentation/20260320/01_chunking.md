@@ -71,4 +71,6 @@ flowchart LR
 文書分割は、RAGの精度を左右する最初の重要なステップです。
 「意味の区切り」を尊重して分割し、適切な重なりを持たせることで、AIが必要な情報を正確に見つけ出せるようになります。
 
-[← 概要に戻る](00_project-overview.md)
+---
+
+[← 概要](00_project-overview.md) | [📋 概要](00_project-overview.md) | [02. タイトル付与 →](02_header-injection.md)

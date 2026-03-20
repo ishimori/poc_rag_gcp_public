@@ -79,4 +79,6 @@ flowchart TD
 - 曖昧な質問に対して「聞き返す」判断もルーティングの一部（PoC評価で0/3の改善に直結）
 - Self-Query（#12）と組み合わせて、振り分け→条件抽出→検索の3段階で精度を最大化できる
 
-[← 概要に戻る](00_project-overview.md)
+---
+
+[← 12. Self-Query](12_self-query.md) | [📋 概要](00_project-overview.md)

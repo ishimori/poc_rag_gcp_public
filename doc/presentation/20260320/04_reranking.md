@@ -77,4 +77,6 @@ AIは自信を持って正確な回答を返せるようになります。
 ベクトル検索で素早く候補を集め、Cross-Encoderでじっくり選別する。
 この2段階の仕組みが、RAGの回答精度を商用レベルに引き上げる重要な要素です。
 
-[← 概要に戻る](00_project-overview.md)
+---
+
+[← 03. ベクトル検索](03_vector-search.md) | [📋 概要](00_project-overview.md) | [05. 自動評価 →](05_evaluation.md)
