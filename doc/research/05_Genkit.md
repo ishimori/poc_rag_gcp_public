@@ -158,4 +158,12 @@ console.log(answer);
 
 ---
 
+## 関連する横断トピック
+
+- [コスト管理](cross-cutting/cost-management.md)
+- [Firestoreスキーマ設計](cross-cutting/firestore-schema.md)
+- [プロンプト設計](cross-cutting/prompt-design.md)
+
+---
+
 → 次回: [第6回 セキュリティ・権限管理とプライバシー](06_セキュリティ.md)

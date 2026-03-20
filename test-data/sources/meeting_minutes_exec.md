@@ -1,3 +1,10 @@
+---
+security_level: restricted
+allowed_groups:
+  - exec_board
+category: management
+---
+
 # 役員会議事録
 
 会議日: 2026-03-10

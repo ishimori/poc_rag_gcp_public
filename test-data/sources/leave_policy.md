@@ -1,3 +1,8 @@
+---
+security_level: general
+category: hr
+---
+
 # 有給休暇規定
 
 制定日: 2023-04-01

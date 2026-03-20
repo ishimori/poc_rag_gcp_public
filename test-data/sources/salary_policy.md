@@ -1,3 +1,8 @@
+---
+security_level: admin_only
+category: hr
+---
+
 # 給与規定
 
 制定日: 2023-04-01
