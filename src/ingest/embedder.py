@@ -11,7 +11,7 @@ _model: TextEmbeddingModel | None = None
 def _get_model() -> TextEmbeddingModel:
     global _model
     if _model is None:
-        vertexai.init(project=config.project_id, location=config.location)
+        vertexai.init(project=config.project_id or None, location=config.location)
         _model = TextEmbeddingModel.from_pretrained(config.embedding_model)
     return _model
 

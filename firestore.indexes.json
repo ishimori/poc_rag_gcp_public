@@ -1,0 +1,12 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "query_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "no_answer", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    }
+  ]
+}

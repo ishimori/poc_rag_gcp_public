@@ -99,6 +99,33 @@ export interface ChunkItem {
   allowed_groups: string[]
 }
 
+// --- Logs ---
+
+export interface QueryLog {
+  id: string
+  query: string
+  answer: string
+  model: string
+  elapsed_ms: number
+  sources: string[]
+  source_count: number
+  no_answer: boolean
+  timestamp: string | null
+}
+
+export function getLogs(params?: {
+  no_answer?: boolean
+  limit?: number
+}): Promise<{ logs: QueryLog[]; count: number }> {
+  const q = new URLSearchParams()
+  if (params?.no_answer) q.set('no_answer', 'true')
+  if (params?.limit) q.set('limit', String(params.limit))
+  const qs = q.toString()
+  return request(`/logs${qs ? `?${qs}` : ''}`, { method: 'GET' })
+}
+
+// --- Chunks ---
+
 export function getChunks(params?: {
   category?: string
   security_level?: string

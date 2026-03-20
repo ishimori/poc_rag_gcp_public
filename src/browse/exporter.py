@@ -17,7 +17,7 @@ _db: firestore.Client | None = None
 def _get_db() -> firestore.Client:
     global _db
     if _db is None:
-        _db = firestore.Client(project=config.project_id)
+        _db = firestore.Client(project=config.project_id or None)
     return _db
 
 

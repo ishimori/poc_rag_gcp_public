@@ -141,6 +141,9 @@ def chat(req: https_fn.Request) -> https_fn.Response:
 def admin(req: https_fn.Request) -> https_fn.Response:
     """管理系 API — パスベースルーティング"""
     path = req.path.rstrip("/")
+    # Firebase Hosting rewrites /api/admin/** → admin function
+    if path.startswith("/api/admin"):
+        path = path[len("/api/admin"):]
     method = req.method
 
     if path == "/ingest" and method == "POST":
@@ -155,6 +158,8 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         return _handle_config_put(req)
     if path == "/chunks" and method == "GET":
         return _handle_chunks(req)
+    if path == "/logs" and method == "GET":
+        return _handle_logs(req)
 
     return _error(f"Not found: {method} {path}", 404)
 
@@ -363,4 +368,43 @@ def _handle_chunks(req: https_fn.Request) -> https_fn.Response:
     return _json_response({
         "chunks": chunks,
         "count": len(chunks),
+    })
+
+
+# --- Logs ---
+
+def _handle_logs(req: https_fn.Request) -> https_fn.Response:
+    """GET /logs — クエリログ一覧取得"""
+    db = _get_firestore_client()
+    query = db.collection("query_logs").order_by(
+        "timestamp", direction=firestore.Query.DESCENDING
+    )
+
+    # フィルタ
+    no_answer = req.args.get("no_answer")
+    if no_answer == "true":
+        query = query.where("no_answer", "==", True)
+
+    limit = min(int(req.args.get("limit", "50")), 200)
+    docs = list(query.limit(limit).get())
+
+    logs = []
+    for doc in docs:
+        data = doc.to_dict() or {}
+        ts = data.get("timestamp")
+        logs.append({
+            "id": doc.id,
+            "query": data.get("query", ""),
+            "answer": data.get("answer", ""),
+            "model": data.get("model", ""),
+            "elapsed_ms": data.get("elapsed_ms", 0),
+            "sources": data.get("sources", []),
+            "source_count": data.get("source_count", 0),
+            "no_answer": data.get("no_answer", False),
+            "timestamp": ts.isoformat() if ts else None,
+        })
+
+    return _json_response({
+        "logs": logs,
+        "count": len(logs),
     })

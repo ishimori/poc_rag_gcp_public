@@ -16,7 +16,7 @@ _vertexai_initialized = False
 def _get_model(model_name: str | None = None) -> GenerativeModel:
     global _vertexai_initialized
     if not _vertexai_initialized:
-        vertexai.init(project=config.project_id, location=config.location)
+        vertexai.init(project=config.project_id or None, location=config.location)
         _vertexai_initialized = True
 
     name = model_name or config.llm_model

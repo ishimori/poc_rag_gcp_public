@@ -8,6 +8,7 @@ import Dashboard from './admin/Dashboard'
 import Tuning from './admin/Tuning'
 import History from './admin/History'
 import DataBrowser from './admin/DataBrowser'
+import Logs from './admin/Logs'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="tuning" element={<Tuning />} />
           <Route path="data" element={<DataBrowser />} />
           <Route path="history" element={<History />} />
+          <Route path="logs" element={<Logs />} />
         </Route>
       </Routes>
     </BrowserRouter>

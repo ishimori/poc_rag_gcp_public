@@ -18,8 +18,13 @@ def rerank(
 
     client = discoveryengine.RankServiceClient()
 
+    project_id = config.project_id
+    if not project_id:
+        import google.auth
+        _, project_id = google.auth.default()
+
     ranking_config = client.ranking_config_path(
-        project=config.project_id,
+        project=project_id,
         location="global",
         ranking_config="default_ranking_config",
     )

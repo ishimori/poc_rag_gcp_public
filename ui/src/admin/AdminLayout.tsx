@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/admin/tuning', label: 'Tuning' },
   { to: '/admin/data', label: 'Data' },
   { to: '/admin/history', label: 'History' },
+  { to: '/admin/logs', label: 'Logs' },
 ]
 
 export default function AdminLayout() {
