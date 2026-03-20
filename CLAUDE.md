@@ -6,7 +6,8 @@
 
 - **フロー**: full（9ステップ）
 - **DDフォルダ**: `doc/DD/`
-- **アーカイブ**: `doc/archived/DD/`
+- **DD索引**: `doc/DD/INDEX.md` — DD作成・ステータス変更・アーカイブ時に必ず更新すること
+- **アーカイブ**: `doc/DD/archived/`
 - **テンプレート**: `doc/templates/dd_template.md`
 
 ## 利用可能なスキル
