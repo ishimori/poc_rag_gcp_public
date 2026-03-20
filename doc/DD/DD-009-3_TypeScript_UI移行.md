@@ -2,7 +2,7 @@
 
 | 作成日 | 更新日 | ステータス |
 |--------|--------|------------|
-| 2026-03-20 | 2026-03-20 | 進行中 |
+| 2026-03-20 | 2026-03-20 | 完了 |
 
 ## 目的
 
@@ -183,7 +183,7 @@ poc_rag_gcp_public/
 ### Phase 4: Streamlit削除・統合テスト
 - [x] `streamlit/` ディレクトリを削除
 - [x] `pyproject.toml` から `streamlit` 依存を削除
-- [ ] 🔬 **機械検証**: TypeScript UIで質問→回答→ソース表示が動作すること（ブラウザ確認）
+- [x] 🔬 **機械検証**: TypeScript UIで質問→回答→ソース表示が動作すること（ブラウザ確認済み）
 
 ## ログ
 
@@ -200,6 +200,9 @@ poc_rag_gcp_public/
 - PH2完了: firebase.json, main.py, requirements.txt 作成。functions-framework でAPI疎通確認OK
 - PH3完了: ui/ に React+Vite+TypeScript チャットUI実装。ビルド成功
 - PH4完了: streamlit/ 削除、pyproject.toml から streamlit 依存削除
+- ブラウザ動作確認OK（質問→回答→ソース表示）
+- 追加機能: モデル切り替えUI（4モデル、価格表示）+ 回答時間表示
+- **DD-009-3 完了**
 
 ---
 
