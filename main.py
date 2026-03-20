@@ -19,7 +19,7 @@ from src.search.flow import rag_flow
     timeout_sec=120,
     min_instances=0,
     cors=options.CorsOptions(
-        cors_origins=["http://localhost:5173"],
+        cors_origins=["http://localhost:5180"],
         cors_methods=["GET", "POST"],
     ),
 )
