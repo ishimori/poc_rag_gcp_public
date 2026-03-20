@@ -2,6 +2,8 @@
 
 > 「文書を切ったら文脈が消える」問題を、AIの力で解決する手法です。
 
+![Contextual Retrievalイメージ](images/10_contextual-retrieval.jpg)
+
 ---
 
 ## PoC実装ステータス
