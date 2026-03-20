@@ -4,6 +4,37 @@
 
 ---
 
+## ストリーミング応答フロー
+
+```mermaid
+sequenceDiagram
+    participant User as ブラウザ
+    participant FH as Firebase Hosting
+    participant CR as Cloud Run
+    participant GK as Genkit Flow
+    participant FS as Firestore
+    participant LLM as Gemini
+
+    User->>FH: 質問送信
+    FH->>CR: APIリクエスト
+    CR->>GK: Flow実行開始
+    GK->>FS: ベクトル検索 + リランキング
+    FS-->>GK: 検索結果
+
+    GK->>LLM: プロンプト + コンテキスト
+    loop ストリーミング生成
+        LLM-->>GK: トークン (1文字〜数文字)
+        GK-->>CR: SSE イベント送信
+        CR-->>FH: SSE 中継
+        FH-->>User: リアルタイム表示
+    end
+
+    GK->>FS: チャットログ保存
+    GK->>FS: フィードバック待ちレコード作成
+```
+
+---
+
 ## 1. 「待たせない」ストリーミングUXの実装
 
 LLMの回答生成には数秒〜数十秒かかる。これをそのまま待たせると「フリーズした」と思われる。
@@ -42,7 +73,7 @@ AIが「わかりません」と答えたとき、またはユーザーが「解
 ## 5. 3,000人のトラフィックを支えるインフラ設計
 
 * **Quotas & Limits**:
-    Gemini APIのレート制限（RPM/TPM）に当たらないよう、Cloud Functions側で**リクエストキューイング**や、部署ごとのクォータ制限を実装する。
+    Gemini API（2.5 Flash/Pro、3.1 Pro等）のレート制限（RPM/TPM）に当たらないよう、Cloud Functions側で**リクエストキューイング**や、部署ごとのクォータ制限を実装する。
 * **Caching Strategy**:
     全く同じ質問（または極めて類似した質問）が1時間以内にあった場合、AIを動かさずキャッシュ（Firestoreに保存した過去の回答）を返すことで、コスト削減と超高速レスポンスを実現する。
 
