@@ -91,4 +91,71 @@ AIを「単なる翻訳機（検索結果を整えるだけ）」ではなく、
 
 ---
 
+## クイックスタート: Genkit Flow + defineTool
+
+### 前提条件
+
+- `npm install genkit @genkit-ai/googleai`
+- 環境変数 `GOOGLE_API_KEY` を設定
+
+### 手順
+
+```typescript
+import { genkit, z } from "genkit";
+import { googleAI, gemini25Flash } from "@genkit-ai/googleai";
+
+const ai = genkit({ plugins: [googleAI()] });
+
+// ツールの定義: 部品検索API
+const searchPartsTool = ai.defineTool(
+  {
+    name: "searchParts",
+    description: "部品番号で部品マスターを検索する。部品番号が質問に含まれる場合に使用。",
+    inputSchema: z.object({
+      partNumber: z.string().describe("部品番号（6桁の数字）"),
+    }),
+    outputSchema: z.object({
+      partNumber: z.string(),
+      material: z.string(),
+      tolerance: z.string(),
+    }),
+  },
+  async ({ partNumber }) => {
+    // 実際にはFirestoreや外部APIを叩く
+    return {
+      partNumber,
+      material: "SUS304",
+      tolerance: "±0.01mm",
+    };
+  }
+);
+
+// Flow の定義: ツール付きのRAGフロー
+const ragFlow = ai.defineFlow(
+  { name: "ragFlow", inputSchema: z.string(), outputSchema: z.string() },
+  async (question) => {
+    const response = await ai.generate({
+      model: gemini25Flash,
+      tools: [searchPartsTool],
+      prompt: `あなたは社内ヘルプデスクのAIアシスタントです。
+ユーザーの質問に対して、利用可能なツールを使って正確に回答してください。
+情報が不足している場合は、何が必要か具体的に聞き返してください。
+
+質問: ${question}`,
+    });
+    return response.text;
+  }
+);
+
+// 実行
+const answer = await ragFlow("ネジ番号999999の公差を教えて");
+console.log(answer);
+```
+
+!!! tip "Genkit Developer UI"
+    `npx genkit start` で開発UIが起動し、Flowの実行・トレース確認がブラウザでできる。
+    [公式ガイド: Genkit Tool Calling](https://firebase.google.com/docs/genkit/tool-calling)
+
+---
+
 → 次回: [第6回 セキュリティ・権限管理とプライバシー](06_セキュリティ.md)

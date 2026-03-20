@@ -79,6 +79,82 @@ AIが「わかりません」と答えたとき、またはユーザーが「解
 
 ---
 
+## クイックスタート: SSEストリーミング応答
+
+### 前提条件
+
+- Genkit セットアップ済み（[第5回](05_Genkit.md)参照）
+- `npm install express`
+
+### サーバー側（Cloud Run / Express）
+
+```typescript
+import express from "express";
+import { genkit, z } from "genkit";
+import { googleAI, gemini25Flash } from "@genkit-ai/googleai";
+
+const ai = genkit({ plugins: [googleAI()] });
+const app = express();
+app.use(express.json());
+
+app.post("/api/chat", async (req, res) => {
+  const { question } = req.body;
+
+  // SSE ヘッダー設定
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  // ストリーミング生成
+  const { stream } = await ai.generateStream({
+    model: gemini25Flash,
+    prompt: question,
+  });
+
+  for await (const chunk of stream) {
+    const text = chunk.text;
+    if (text) {
+      res.write(`data: ${JSON.stringify({ text })}\n\n`);
+    }
+  }
+
+  res.write("data: [DONE]\n\n");
+  res.end();
+});
+
+app.listen(3000);
+```
+
+### クライアント側（ブラウザ）
+
+```javascript
+async function askQuestion(question) {
+  const response = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question }),
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const lines = decoder.decode(value).split("\n");
+    for (const line of lines) {
+      if (line.startsWith("data: ") && line !== "data: [DONE]") {
+        const { text } = JSON.parse(line.slice(6));
+        document.getElementById("answer").textContent += text;
+      }
+    }
+  }
+}
+```
+
+---
+
 ## シリーズ総括
 
 * **第1〜2回**で「耳と目（データ）」を整え、
