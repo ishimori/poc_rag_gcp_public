@@ -41,6 +41,11 @@ nav:
   - フェーズ4 運用・評価・UX:
     - 第7回 評価: 07_評価.md
     - 第8回 UI/UX: 08_UIUX.md
+  - 横断トピック:
+    - メタデータ設計: cross-cutting/metadata-design.md
+    - Firestoreスキーマ: cross-cutting/firestore-schema.md
+    - コスト管理: cross-cutting/cost-management.md
+    - プロンプト設計: cross-cutting/prompt-design.md
   - 意思決定記録（ADR）:
     - 概要: adr/index.md
     - ADR-001 ドキュメント解析: adr/ADR-001_ドキュメント解析.md
