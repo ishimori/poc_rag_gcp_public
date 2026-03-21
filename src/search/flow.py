@@ -6,6 +6,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 
 from src.config import config
+from src.search.metadata_scorer import apply_metadata_scores
 from src.search.reranker import rerank
 from src.search.retriever import SearchResult, vector_search
 
@@ -45,6 +46,11 @@ def rag_flow(query: str, model_name: str | None = None) -> RAGResponse:
     # Step 2: リランキング
     reranked_results = rerank(query, search_results)
     print(f"  [Rerank] {len(reranked_results)} results after filtering")
+
+    # Step 2.5: メタデータスコアリング
+    if config.metadata_scoring:
+        reranked_results = apply_metadata_scores(query, reranked_results)
+        print(f"  [MetadataScore] applied to {len(reranked_results)} results")
 
     # Step 3: コンテキスト構築
     context = "\n\n---\n\n".join(r.content for r in reranked_results)

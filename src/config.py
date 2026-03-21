@@ -27,6 +27,11 @@ class Config:
     rerank_top_n: int = 5
     rerank_threshold: float = 0.01
 
+    # Metadata Scoring
+    metadata_scoring: bool = True
+    metadata_category_bonus: float = 0.03
+    metadata_filename_bonus: float = 0.02
+
     # LLM
     llm_model: str = "gemini-2.5-flash"
 

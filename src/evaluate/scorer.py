@@ -50,6 +50,7 @@ FEATURE_MAP: dict[str, str | None] = {
     "permission_filter": None,  # 権限フィルタ: 未実装
     "clarification": None,  # 聞き返し機能: 未実装
     "header_injection": "header_injection",  # config.header_injection
+    "metadata_scoring": "metadata_scoring",  # メタデータスコアリング
 }
 
 
