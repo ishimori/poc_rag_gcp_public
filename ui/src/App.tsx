@@ -19,6 +19,19 @@ interface Message {
   model?: string
 }
 
+// 検索時にON/OFF可能なRAG技術（モックアップ: UIのみ、バックエンド未連携）
+// ※ Ingest時に決まる技術（チャンキング、ヘッダー注入、文脈説明）はTuning画面で管理
+const RAG_TECHNIQUES = [
+  { id: 'vector',      label: 'ベクトル検索',         desc: '意味の近さで候補を検索', enabled: true },
+  { id: 'reranking',   label: 'リランキング',         desc: 'AIが検索結果を再評価して絞り込み', enabled: true },
+  { id: 'hybrid',      label: 'ハイブリッド検索',     desc: 'キーワード検索を併用し型番に強く', enabled: false },
+  { id: 'metadata',    label: 'メタデータスコアリング', desc: '更新日やカテゴリをランキングに反映', enabled: false },
+  { id: 'selfquery',   label: 'AIフィルタ自動生成',   desc: '条件を自動抽出して検索を絞り込み', enabled: false },
+  { id: 'routing',     label: 'インテントルーティング', desc: '質問の種類に応じて検索方法を自動切替', enabled: false },
+  { id: 'clarify',     label: '曖昧質問の聞き返し',   desc: '情報不足の質問にAIが確認質問', enabled: false },
+  { id: 'security',    label: '権限フィルタ',         desc: 'ユーザー権限で検索対象を制限', enabled: false },
+]
+
 const MODELS = [
   {
     id: 'gemini-2.5-flash',
@@ -34,11 +47,45 @@ const MODELS = [
   },
 ]
 
-const SAMPLE_QUESTIONS = [
-  'ネジ999999の材質は？',
-  'VPN接続の手順を教えて',
-  'PCが重い',
-  '有給休暇は何日もらえる？',
+const DATA_CATEGORIES = [
+  {
+    label: '部品・製造',
+    docs: ['部品カタログ', '部品仕様書×4', '品質基準', '新製品情報'],
+    questions: [
+      'ネジ999999と999998の違いは？',
+      'SUS316Lのボルトの部品番号は？',
+      'M8ボルトの締付トルクは？',
+      'ネジ999999と一緒に必要な部品は？',
+      '品質検査の等級Aの引張強さの基準は？',
+      '不良品が見つかったら何をする？',
+      '新製品のCorrGuardとは何？',
+    ],
+  },
+  {
+    label: 'IT・インフラ',
+    docs: ['ヘルプデスクFAQ', 'VPNマニュアル', 'PC障害対応', 'ネットワーク規程', 'セキュリティポリシー'],
+    questions: [
+      'VPNが繋がらない原因を全て教えて',
+      'リモートワークに必要な準備を全部教えて',
+      '社内Wi-FiのSSIDは？ゲスト用との違いは？',
+      'PCが重い',
+      'パスワードの条件は？',
+      '機密情報をメールで送っていいか？',
+      '社外秘の書類を捨てたい',
+    ],
+  },
+  {
+    label: '人事・総務・経理',
+    docs: ['休暇規程', '給与規程', '経費精算マニュアル', '入社ガイド', '組織図'],
+    questions: [
+      '入社初日にやることを全部教えて',
+      '経費精算の手順を教えて',
+      '5万円の経費は誰が最終承認する？',
+      'タクシー代を会社に請求したい',
+      '有給休暇は何日もらえる？入社3年目です',
+      '情報システム部の部長は誰？',
+    ],
+  },
 ]
 
 export default function App() {
@@ -46,6 +93,7 @@ export default function App() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState(MODELS[0].id)
+  // 検索技術トグル（モックアップ: UI表示のみ、切り替え機能は未実装）
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -131,23 +179,74 @@ export default function App() {
 
           <div className="sidebar-divider" />
 
-          <h3>質問の例</h3>
-          {SAMPLE_QUESTIONS.map((q, i) => (
-            <button
-              key={i}
-              className="sample-btn"
-              onClick={() => handleSubmit(q)}
-              disabled={loading}
-            >
-              {q}
-            </button>
-          ))}
+          <h3>検索技術</h3>
+          <p className="sidebar-hint">質問時に使う技術を切り替えられます（実装予定）</p>
+          <div className="tech-toggles">
+            {RAG_TECHNIQUES.map((t) => (
+              <div
+                key={t.id}
+                className="tech-toggle tech-not-impl"
+                title={t.desc}
+              >
+                <input
+                  type="checkbox"
+                  checked={t.enabled}
+                  disabled
+                />
+                <div className="tech-toggle-info">
+                  <span className="tech-toggle-name">{t.label}</span>
+                  <span className="tech-toggle-desc">{t.desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {messages.length > 0 && (
+            <>
+              <div className="sidebar-divider" />
+              <button
+                className="new-chat-btn"
+                onClick={() => setMessages([])}
+                disabled={loading}
+              >
+                新しい質問
+              </button>
+            </>
+          )}
         </aside>
 
         <div className="chat-area">
           <div className="messages">
             {messages.length === 0 && (
-              <p className="empty">左のサンプル質問をクリックするか、下の入力欄から質問してください</p>
+              <div className="welcome">
+                <h3 className="welcome-title">収録データと質問例</h3>
+                <p className="welcome-hint">19件の社内ドキュメントを収録しています。質問ボタンをクリックして試せます。</p>
+                <div className="category-grid">
+                  {DATA_CATEGORIES.map((cat) => (
+                    <div key={cat.label} className="category-card">
+                      <h4 className="category-label">{cat.label}</h4>
+                      <ul className="category-docs">
+                        {cat.docs.map((doc, i) => (
+                          <li key={i}>{doc}</li>
+                        ))}
+                      </ul>
+                      <div className="category-questions">
+                        <span className="category-q-label">質問してみよう</span>
+                        {cat.questions.map((q, i) => (
+                          <button
+                            key={i}
+                            className="sample-btn"
+                            onClick={() => handleSubmit(q)}
+                            disabled={loading}
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
             {messages.map((msg, i) => (
               <div key={i} className={`message ${msg.role}`}>
