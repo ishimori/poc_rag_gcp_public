@@ -77,7 +77,19 @@ RRF統合（重複doc_idはスコア加算）
   - `query_expander.py` 新規作成（Gemini 2.5 Flash, 温度0, JSON配列出力）
   - `hybrid.py` にMulti-Query統合（全クエリの検索結果をRRFに投入）
   - デフォルトOFF。`config.multi_query = True` で有効化
+- **フル評価（DD-019-10/11/12/13 全ON）: Overall 78.4%（81.1%→-2.7pt）**
+  - 改善: ambiguous 100%, unanswerable 100%, cross_category 100%, table_extract 100%
+  - **悪化: exact_match 100%→75%, similar_number 100%→67%, step_sequence 100%→71%**
+  - 原因: 展開クエリがノイズとなり、元々正確に引けていた型番・手順検索の精度を低下
+- **簡易評価（Multi-Query OFF, --limit 20）: exact_match 100%, similar_number 100%, step_sequence 100% に回復**
+- **結論: Multi-Queryは現状ではデフォルトOFFが正解。改善が必要な場合は元クエリの重み付け優先等の対策が必要**
 
 ---
 
 ## DA批判レビュー記録
+
+### フル評価 DA批判レビュー
+
+| # | 発見した問題/改善点 | 重要度 | DA観点 | 対応 |
+|---|-------------------|--------|--------|------|
+| 1 | 展開クエリが全て同じ重みでRRFに投入されるため、元クエリの正確なヒットが薄まる | High | 検索精度劣化 | デフォルトOFFに戻し。将来的には元クエリに高い重みを付与するか、semantic系のみに適用する等の改善が必要 |

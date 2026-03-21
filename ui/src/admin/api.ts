@@ -21,6 +21,15 @@ export interface ConfigParams {
   top_k: number
   rerank_top_n: number
   rerank_threshold: number
+  // 検索技術トグル
+  hybrid_search: boolean
+  metadata_scoring: boolean
+  clarification: boolean
+  permission_filter: boolean
+  shadow_retrieval: boolean
+  multi_query: boolean
+  answerability_threshold: number
+  contextual_retrieval: boolean
 }
 
 export function getConfig(): Promise<ConfigParams> {

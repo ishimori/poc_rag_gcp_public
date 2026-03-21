@@ -72,6 +72,7 @@ top_score ≥ 閾値 → 通常の回答生成
   - `config.py` に `answerability_threshold` 追加（デフォルト0=無効）
   - `flow.py` に Step 2.8（Answerability Gate）追加
   - 閾値はフル評価のスコア分布を見て後から調整
+- **フル評価結果: unanswerable 80%→100%（5/5）** — answerability_threshold=0.0（OFF）のままだが、他の施策（DD-019-13等）との相乗効果で改善。閾値チューニングは保留
 
 ---
 

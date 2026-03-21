@@ -528,10 +528,18 @@ _TUNABLE_PARAMS: dict[str, type] = {
     "chunk_size": int,
     "chunk_overlap": int,
     "header_injection": bool,
-    "clarification": bool,
     "top_k": int,
     "rerank_top_n": int,
     "rerank_threshold": float,
+    # 検索技術トグル
+    "hybrid_search": bool,
+    "metadata_scoring": bool,
+    "clarification": bool,
+    "permission_filter": bool,
+    "shadow_retrieval": bool,
+    "multi_query": bool,
+    "answerability_threshold": float,
+    "contextual_retrieval": bool,
 }
 
 

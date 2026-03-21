@@ -20,17 +20,18 @@ interface Message {
   isClarification?: boolean
 }
 
-// 検索時にON/OFF可能なRAG技術（モックアップ: UIのみ、バックエンド未連携）
-// ※ Ingest時に決まる技術（チャンキング、ヘッダー注入、文脈説明）はTuning画面で管理
-const RAG_TECHNIQUES = [
-  { id: 'vector',      label: 'ベクトル検索',         desc: '意味の近さで候補を検索', enabled: true },
-  { id: 'reranking',   label: 'リランキング',         desc: 'AIが検索結果を再評価して絞り込み', enabled: true },
-  { id: 'hybrid',      label: 'ハイブリッド検索',     desc: 'キーワード検索を併用し型番に強く', enabled: false },
-  { id: 'metadata',    label: 'メタデータスコアリング', desc: '更新日やカテゴリをランキングに反映', enabled: false },
-  { id: 'selfquery',   label: 'AIフィルタ自動生成',   desc: '条件を自動抽出して検索を絞り込み', enabled: false },
-  { id: 'routing',     label: 'インテントルーティング', desc: '質問の種類に応じて検索方法を自動切替', enabled: false },
-  { id: 'clarify',     label: '曖昧質問の聞き返し',   desc: '情報不足の質問にAIが確認質問', enabled: false },
-  { id: 'security',    label: '権限フィルタ',         desc: 'ユーザー権限で検索対象を制限', enabled: false },
+// 検索時にON/OFF可能なRAG技術 — config APIと連携
+// configKey: backend config.py の属性名。nullの場合は常時ON（切替不可）
+const RAG_TECHNIQUES: { id: string; label: string; desc: string; configKey: string | null }[] = [
+  { id: 'vector',      label: 'ベクトル検索',         desc: '意味の近さで候補を検索', configKey: null },
+  { id: 'hybrid',      label: 'ハイブリッド検索',     desc: 'キーワード検索を併用し型番に強く', configKey: 'hybrid_search' },
+  { id: 'reranking',   label: 'リランキング',         desc: 'AIが検索結果を再評価して絞り込み', configKey: null },
+  { id: 'metadata',    label: 'メタデータスコアリング', desc: 'カテゴリやファイル名をランキングに反映', configKey: 'metadata_scoring' },
+  { id: 'clarify',     label: '曖昧質問の聞き返し',   desc: '情報不足の質問にAIが確認質問', configKey: 'clarification' },
+  { id: 'security',    label: '権限フィルタ',         desc: 'ユーザー権限で検索対象を制限', configKey: 'permission_filter' },
+  { id: 'shadow',      label: '権限除外検出',         desc: '権限で弾かれた文書を検出し即拒否', configKey: 'shadow_retrieval' },
+  { id: 'multiquery',  label: 'マルチクエリ展開',     desc: 'クエリを複数に言い換えて検索精度向上', configKey: 'multi_query' },
+  { id: 'context',     label: '文脈説明の自動付与',   desc: 'チャンクにLLM生成の文脈説明を付与（再Ingest要）', configKey: 'contextual_retrieval' },
 ]
 
 const USER_ROLES = [
@@ -101,11 +102,42 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState(MODELS[0].id)
   const [selectedRole, setSelectedRole] = useState(USER_ROLES[0].id)
+  const [techConfig, setTechConfig] = useState<Record<string, boolean>>({})
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // マウント時にconfigを取得
+  useEffect(() => {
+    fetch('/api/admin/config')
+      .then((r) => r.json())
+      .then((data) => {
+        const boolKeys: Record<string, boolean> = {}
+        for (const t of RAG_TECHNIQUES) {
+          if (t.configKey && t.configKey in data) {
+            boolKeys[t.configKey] = Boolean(data[t.configKey])
+          }
+        }
+        setTechConfig(boolKeys)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleTechToggle(configKey: string, value: boolean) {
+    setTechConfig((prev) => ({ ...prev, [configKey]: value }))
+    try {
+      await fetch('/api/admin/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [configKey]: value }),
+      })
+    } catch {
+      // 失敗時は元に戻す
+      setTechConfig((prev) => ({ ...prev, [configKey]: !value }))
+    }
+  }
 
   async function handleSubmit(query: string) {
     if (!query.trim() || loading) return
@@ -207,25 +239,30 @@ export default function App() {
           <div className="sidebar-divider" />
 
           <h3>検索技術</h3>
-          <p className="sidebar-hint">質問時に使う技術を切り替えられます（実装予定）</p>
+          <p className="sidebar-hint">質問時に使う技術を切り替えられます</p>
           <div className="tech-toggles">
-            {RAG_TECHNIQUES.map((t) => (
-              <div
-                key={t.id}
-                className="tech-toggle tech-not-impl"
-                title={t.desc}
-              >
-                <input
-                  type="checkbox"
-                  checked={t.enabled}
-                  disabled
-                />
-                <div className="tech-toggle-info">
-                  <span className="tech-toggle-name">{t.label}</span>
-                  <span className="tech-toggle-desc">{t.desc}</span>
+            {RAG_TECHNIQUES.map((t) => {
+              const isOn = t.configKey ? (techConfig[t.configKey] ?? false) : true
+              const canToggle = t.configKey !== null
+              return (
+                <div
+                  key={t.id}
+                  className={`tech-toggle${canToggle ? '' : ' tech-always-on'}`}
+                  title={t.desc}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isOn}
+                    disabled={!canToggle || loading}
+                    onChange={(e) => canToggle && handleTechToggle(t.configKey!, e.target.checked)}
+                  />
+                  <div className="tech-toggle-info">
+                    <span className="tech-toggle-name">{t.label}</span>
+                    <span className="tech-toggle-desc">{t.desc}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {messages.length > 0 && (
