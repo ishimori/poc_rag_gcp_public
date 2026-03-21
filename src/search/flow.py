@@ -39,7 +39,11 @@ class RAGResponse:
     is_clarification: bool = False
 
 
-def rag_flow(query: str, model_name: str | None = None) -> RAGResponse:
+def rag_flow(
+    query: str,
+    model_name: str | None = None,
+    user_groups: list[str] | None = None,
+) -> RAGResponse:
     """RAG Flow: 曖昧判定 → 検索 → リランキング → 回答生成"""
     # Step 0: 曖昧判定（Pre-RAG）
     if config.clarification:
@@ -55,8 +59,8 @@ def rag_flow(query: str, model_name: str | None = None) -> RAGResponse:
             )
         print("  [Clarifier] Query is clear, proceeding to search")
 
-    # Step 1: ベクトル検索
-    search_results = vector_search(query)
+    # Step 1: ベクトル検索（権限フィルタ付き）
+    search_results = vector_search(query, user_groups=user_groups)
     print(f"  [Search] {len(search_results)} results")
 
     # Step 2: リランキング
@@ -86,11 +90,20 @@ def _generate_answer(query: str, context: str, model_name: str | None = None) ->
     """Vertex AI Gemini で回答を生成する"""
     model = _get_model(model_name)
 
+    permission_hint = ""
+    if config.permission_filter:
+        permission_hint = (
+            "\nなお、検索結果はユーザーのアクセス権限に基づいてフィルタリングされています。"
+            "該当する情報が見つからない場合、アクセス権限による制限の可能性があります。"
+            "その場合は「この情報へのアクセス権限がありません」と回答してください。"
+        )
+
     prompt = f"""あなたは社内ドキュメントに基づいて質問に回答するアシスタントです。
 
 以下のコンテキストのみを使って質問に回答してください。
 コンテキストに情報がない場合は「提供された情報には記載がありません」と回答してください。
 推測や外部知識は使わないでください。
+{permission_hint}
 
 ## コンテキスト
 {context}

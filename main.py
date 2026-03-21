@@ -13,6 +13,7 @@ sys.path.insert(0, Path(__file__).parent.as_posix())
 from firebase_functions import https_fn, options
 from google.cloud import firestore
 
+from src.config import config
 from src.search.flow import rag_flow
 
 NO_ANSWER_MARKER = "記載がありません"
@@ -103,9 +104,10 @@ def chat(req: https_fn.Request) -> https_fn.Response:
 
     query = body["query"]
     model = body.get("model")
+    user_groups = body.get("user_groups", config.user_groups)
 
     start_time = time.monotonic()
-    result = rag_flow(query, model_name=model)
+    result = rag_flow(query, model_name=model, user_groups=user_groups)
     elapsed_ms = int((time.monotonic() - start_time) * 1000)
 
     sources = [

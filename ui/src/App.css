@@ -67,6 +67,21 @@
   color: #999;
 }
 
+.role-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: #fff;
+  cursor: pointer;
+}
+
+.role-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .sidebar-divider {
   border-top: 1px solid #e0e0e0;
   margin: 16px 0;

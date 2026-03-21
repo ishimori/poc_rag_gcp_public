@@ -35,11 +35,19 @@ class Config:
     metadata_category_bonus: float = 0.03
     metadata_filename_bonus: float = 0.02
 
+    # Hybrid Search
+    hybrid_search: bool = True
+    rrf_k: int = 60
+
     # LLM
     llm_model: str = "gemini-2.5-flash"
 
     # Clarification
     clarification: bool = True
+
+    # Permission
+    permission_filter: bool = True
+    user_groups: list[str] = ["all"]
 
     # Evaluation
     results_dir: str = "results"

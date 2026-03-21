@@ -29,7 +29,11 @@ class SearchResult:
     security_level: str
 
 
-def vector_search(query: str, top_k: int | None = None) -> list[SearchResult]:
+def vector_search(
+    query: str,
+    top_k: int | None = None,
+    user_groups: list[str] | None = None,
+) -> list[SearchResult]:
     """Firestoreのベクトル検索でチャンクを取得する"""
     db = _get_db()
     collection = db.collection(config.collection_name)
@@ -38,8 +42,13 @@ def vector_search(query: str, top_k: int | None = None) -> list[SearchResult]:
     # クエリをベクトル化
     query_embedding = embed_text(query)
 
+    # Pre-filtering: 権限フィルタ
+    base = collection
+    if config.permission_filter and user_groups:
+        base = collection.where("allowed_groups", "array_contains_any", user_groups)
+
     # Firestoreベクトル検索
-    vector_query = collection.find_nearest(
+    vector_query = base.find_nearest(
         vector_field="embedding",
         query_vector=Vector(query_embedding),
         distance_measure=DistanceMeasure.COSINE,

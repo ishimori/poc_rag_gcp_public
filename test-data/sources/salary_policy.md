@@ -1,5 +1,6 @@
 ---
 security_level: admin_only
+allowed_groups: ["hr_admin"]
 category: hr
 ---
 

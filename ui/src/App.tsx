@@ -33,6 +33,12 @@ const RAG_TECHNIQUES = [
   { id: 'security',    label: '権限フィルタ',         desc: 'ユーザー権限で検索対象を制限', enabled: false },
 ]
 
+const USER_ROLES = [
+  { id: 'general',   label: '一般社員',   groups: ['all'] },
+  { id: 'hr_admin',  label: 'HR管理者',  groups: ['all', 'hr_admin'] },
+  { id: 'executive', label: '役員',      groups: ['all', 'exec_board'] },
+]
+
 const MODELS = [
   {
     id: 'gemini-2.5-flash',
@@ -94,7 +100,7 @@ export default function App() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [selectedModel, setSelectedModel] = useState(MODELS[0].id)
-  // 検索技術トグル（モックアップ: UI表示のみ、切り替え機能は未実装）
+  const [selectedRole, setSelectedRole] = useState(USER_ROLES[0].id)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -115,7 +121,11 @@ export default function App() {
       const res = await fetch('/api', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, model: selectedModel }),
+        body: JSON.stringify({
+          query,
+          model: selectedModel,
+          user_groups: USER_ROLES.find((r) => r.id === selectedRole)!.groups,
+        }),
       })
 
       if (!res.ok) throw new Error(`API error: ${res.status}`)
@@ -178,6 +188,21 @@ export default function App() {
               </div>
             </label>
           ))}
+
+          <div className="sidebar-divider" />
+
+          <h3>ロール選択</h3>
+          <p className="sidebar-hint">検索時の権限レベルを切り替えます</p>
+          <select
+            className="role-select"
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            disabled={loading}
+          >
+            {USER_ROLES.map((r) => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </select>
 
           <div className="sidebar-divider" />
 
