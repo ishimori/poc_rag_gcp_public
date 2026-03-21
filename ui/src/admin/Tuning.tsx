@@ -94,6 +94,7 @@ export default function Tuning() {
     }
   }
 
+  const isProd = import.meta.env.PROD
   const isRunning = ingestStatus === 'loading' || evalStatus === 'loading' || retuneStatus === 'loading'
 
   if (!config) return <div className="admin-page"><p>Loading...</p></div>
@@ -114,6 +115,14 @@ export default function Tuning() {
       <div className="admin-guide">
         <strong>操作フロー:</strong> ① パラメータ変更 → ② Re-tune実行（Save → Ingest → Evaluate を一括実行）→ ③ Historyで前回と比較
       </div>
+
+      {isProd && (
+        <div className="admin-error" style={{ background: '#fff3cd', color: '#856404', borderColor: '#ffc107' }}>
+          ⚠ Ingest・Evaluate・Re-tune はローカル環境でのみ実行できます。パラメータ変更のみ可能です。
+          <br />
+          <code style={{ fontSize: '0.85em' }}>bash scripts/dev.sh</code> でローカルサーバーを起動してください。
+        </div>
+      )}
 
       {/* Technique Toggles */}
       <div className="admin-section">
@@ -199,16 +208,16 @@ export default function Tuning() {
               />
               Clear before ingest
             </label>
-            <button className="admin-btn" onClick={handleIngest} disabled={isRunning}>
+            <button className="admin-btn" onClick={handleIngest} disabled={isRunning || isProd}>
               {ingestStatus === 'loading' ? 'Ingesting...' : 'Run Ingest'}
             </button>
           </div>
 
-          <button className="admin-btn" onClick={handleEvaluate} disabled={isRunning}>
+          <button className="admin-btn" onClick={handleEvaluate} disabled={isRunning || isProd}>
             {evalStatus === 'loading' ? 'Evaluating...' : 'Run Evaluate'}
           </button>
 
-          <button className="admin-btn admin-btn-primary" onClick={handleRetune} disabled={isRunning}>
+          <button className="admin-btn admin-btn-primary" onClick={handleRetune} disabled={isRunning || isProd}>
             {retuneStatus === 'loading' ? 'Re-tuning...' : 'Re-tune (Save → Ingest → Evaluate)'}
           </button>
         </div>
