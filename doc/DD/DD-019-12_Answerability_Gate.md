@@ -47,23 +47,31 @@ top_score ≥ 閾値 → 通常の回答生成
 
 ## 決定事項
 
-（Phase 0で検討）
+- **デフォルトOFF**（`answerability_threshold=0.0`）で既存動作を維持
+- **閾値はフル評価のスコア分布を見て調整**する（まずは仕組みだけ入れる）
+- リランキング後のtop1スコアで判定。閾値未満なら「提供された情報には記載がありません」で拒否
+- LLMを呼ばずにアプリ側で拒否（DD-019-10と同じ設計思想）
 
 ## タスク一覧
 
-### Phase 0: 事前精査
-- [ ] 📋 **各Phaseのタスク精査・詳細化**
-  - unanswerable 失敗1件のクエリとリランキングスコアを確認
-  - 正解ケースのtop_score分布を確認し、閾値を決定
-- [ ] 😈 **Devil's Advocate調査**
+### Phase 0: 事前精査 ✅
+- [x] 📋 **リランキングスコアの確認**: Vertex AI Rankerのスコア（0〜1）。`rerank_threshold`（0.01）で既にフィルタ済み
+- [x] 📋 **閾値戦略**: まずは仕組みを入れてデフォルトOFF。フル評価時のログでスコア分布を確認して閾値を決定
 
-### Phase 1: 実装
-（Phase 0の決定後に詳細化）
+### Phase 1: 実装 ✅
+- [x] `src/config.py`: `answerability_threshold: float = 0.0` 追加（0=無効）
+- [x] `src/search/flow.py`: Step 2.8 として Answerability Gate 追加（リランキング後、コンテキスト構築前）
+- [x] `src/evaluate/scorer.py`: `FEATURE_MAP` に `answerability_gate` 追加
+- [x] 🔬 **機械検証（構文）**: `py_compile` OK
 
 ## ログ
 
 ### 2026-03-22
 - DD作成（DD-019からの派生、外部LLM分析結果に基づく）
+- Phase 0〜1完了:
+  - `config.py` に `answerability_threshold` 追加（デフォルト0=無効）
+  - `flow.py` に Step 2.8（Answerability Gate）追加
+  - 閾値はフル評価のスコア分布を見て後から調整
 
 ---
 

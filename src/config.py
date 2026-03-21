@@ -39,6 +39,10 @@ class Config:
     hybrid_search: bool = True
     rrf_k: int = 60
 
+    # Multi-Query Expansion
+    multi_query: bool = False  # ONでクエリを複数展開して検索
+    multi_query_count: int = 3  # 展開するクエリ数（original + N）
+
     # LLM
     llm_model: str = "gemini-2.5-flash"
 
@@ -48,6 +52,9 @@ class Config:
     # Permission
     permission_filter: bool = True
     user_groups: list[str] = ["all"]
+
+    # Answerability Gate
+    answerability_threshold: float = 0.0  # 0=無効。リランキング後のtop1スコアがこれ未満なら拒否
 
     # Evaluation
     results_dir: str = "results"
