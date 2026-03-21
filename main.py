@@ -124,6 +124,7 @@ def chat(req: https_fn.Request) -> https_fn.Response:
         "answer": result.answer,
         "query": result.query,
         "sources": sources,
+        "is_clarification": result.is_clarification,
     }
 
     _save_query_log(query, result.answer, model, elapsed_ms, sources)
@@ -464,6 +465,7 @@ _TUNABLE_PARAMS: dict[str, type] = {
     "chunk_size": int,
     "chunk_overlap": int,
     "header_injection": bool,
+    "clarification": bool,
     "top_k": int,
     "rerank_top_n": int,
     "rerank_threshold": float,

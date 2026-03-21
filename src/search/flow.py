@@ -6,6 +6,7 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 
 from src.config import config
+from src.search.clarifier import detect_ambiguity
 from src.search.metadata_scorer import apply_metadata_scores
 from src.search.reranker import rerank
 from src.search.retriever import SearchResult, vector_search
@@ -35,10 +36,25 @@ class RAGResponse:
     sources: list[SearchResult]
     reranked_sources: list[SearchResult]
     query: str
+    is_clarification: bool = False
 
 
 def rag_flow(query: str, model_name: str | None = None) -> RAGResponse:
-    """RAG Flow: 検索 → リランキング → 回答生成"""
+    """RAG Flow: 曖昧判定 → 検索 → リランキング → 回答生成"""
+    # Step 0: 曖昧判定（Pre-RAG）
+    if config.clarification:
+        clarification = detect_ambiguity(query)
+        if clarification.is_ambiguous:
+            print("  [Clarifier] Ambiguous query detected, returning clarification")
+            return RAGResponse(
+                answer=clarification.clarification_question,
+                sources=[],
+                reranked_sources=[],
+                query=query,
+                is_clarification=True,
+            )
+        print("  [Clarifier] Query is clear, proceeding to search")
+
     # Step 1: ベクトル検索
     search_results = vector_search(query)
     print(f"  [Search] {len(search_results)} results")

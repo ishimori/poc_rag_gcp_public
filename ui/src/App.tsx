@@ -17,6 +17,7 @@ interface Message {
   sources?: Source[]
   elapsedMs?: number
   model?: string
+  isClarification?: boolean
 }
 
 // 検索時にON/OFF可能なRAG技術（モックアップ: UIのみ、バックエンド未連携）
@@ -126,9 +127,10 @@ export default function App() {
       const assistantMsg: Message = {
         role: 'assistant',
         content: data.answer,
-        sources: data.sources,
+        sources: data.is_clarification ? undefined : data.sources,
         elapsedMs,
         model: modelInfo?.label,
+        isClarification: data.is_clarification || false,
       }
       setMessages((prev) => [...prev, assistantMsg])
     } catch (e) {
@@ -249,7 +251,8 @@ export default function App() {
               </div>
             )}
             {messages.map((msg, i) => (
-              <div key={i} className={`message ${msg.role}`}>
+              <div key={i} className={`message ${msg.role}${msg.isClarification ? ' clarification' : ''}`}>
+                {msg.isClarification && <div className="clarification-label">確認質問</div>}
                 <div className="message-content"><Markdown>{msg.content}</Markdown></div>
                 {msg.role === 'assistant' && (msg.elapsedMs || msg.model) && (
                   <div className="message-meta">

@@ -48,7 +48,7 @@ class EvalResult:
 # 機能名 → config属性名。Noneは未実装を意味する
 FEATURE_MAP: dict[str, str | None] = {
     "permission_filter": None,  # 権限フィルタ: 未実装
-    "clarification": None,  # 聞き返し機能: 未実装
+    "clarification": "clarification",  # 聞き返し機能
     "header_injection": "header_injection",  # config.header_injection
     "metadata_scoring": "metadata_scoring",  # メタデータスコアリング
     "contextual_retrieval": "contextual_retrieval",  # 文脈説明の自動付与

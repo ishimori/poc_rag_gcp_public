@@ -19,7 +19,7 @@ class Config:
     header_injection: bool = True
 
     # Contextual Retrieval
-    contextual_retrieval: bool = False  # ONの場合header_injectionより優先
+    contextual_retrieval: bool = True  # ONの場合header_injectionより優先
 
     # Embedding
     embedding_model: str = "text-embedding-005"
@@ -37,6 +37,9 @@ class Config:
 
     # LLM
     llm_model: str = "gemini-2.5-flash"
+
+    # Clarification
+    clarification: bool = True
 
     # Evaluation
     results_dir: str = "results"

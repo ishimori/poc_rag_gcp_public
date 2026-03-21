@@ -335,6 +335,19 @@
   color: #999;
 }
 
+/* Clarification */
+.message.clarification .message-content {
+  background: #fff8e1;
+  border-left: 3px solid #f9a825;
+}
+
+.clarification-label {
+  font-size: 0.75rem;
+  color: #f57f17;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
 /* Sources */
 .sources {
   margin-top: 8px;
