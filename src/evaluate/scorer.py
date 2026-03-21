@@ -53,6 +53,8 @@ FEATURE_MAP: dict[str, str | None] = {
     "metadata_scoring": "metadata_scoring",  # メタデータスコアリング
     "contextual_retrieval": "contextual_retrieval",  # 文脈説明の自動付与
     "hybrid_search": "hybrid_search",  # ハイブリッド検索
+    "answerability_gate": "answerability_threshold",  # 回答可能性ゲート
+    "multi_query": "multi_query",  # Multi-Query Expansion
 }
 
 
@@ -133,6 +135,8 @@ _JUDGE_PROMPT = """\
 - **incorrect**: 期待回答の情報をほとんど含んでいない、または明らかに間違っている
 
 意味的に同等であれば表現の違いは問いません（例: 「権限がない」と「アクセス拒否」は同等）。
+聞き返し（確認質問）の場合: 期待回答と実際の回答がどちらも
+「ユーザーに詳細を確認する質問」であれば、表現や具体例が異なっていてもcorrectと判定してください。
 
 ## 出力形式
 以下のJSON形式のみを出力してください。他のテキストは不要です。
