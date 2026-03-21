@@ -2,7 +2,7 @@
 
 | 作成日 | 更新日 | ステータス |
 |--------|--------|------------|
-| 2026-03-21 | 2026-03-21 | 進行中 |
+| 2026-03-21 | 2026-03-21 | 完了 |
 
 ## 目的
 
@@ -103,8 +103,8 @@ CLI (scripts/ingest.py)  ──書き込み──→  Firestore (task_status)
   - 各ファイル処理後: `update_task_status("ingest", current=i, current_file=name, elapsed=..., estimated_remaining=...)`
   - 完了/エラー時: `clear_task_status("ingest")`（try/finally）
   - 中止: `check_cancel("ingest")` でループ脱出
-- [ ] 🔬 **機械検証**: `python scripts/ingest.py --clear` 実行中にFirestoreの `task_status/ingest` が更新されることを確認
-- [ ] 😈 **DA批判レビュー**
+- [x] 🔬 **機械検証**: `python scripts/ingest.py --clear` 実行中にFirestoreの `task_status/ingest` を直接読み取り → `running: True, current: 23/61, elapsed: 243s` を確認 ✅
+- [x] 😈 **DA批判レビュー**: `current_file` がWindows環境でCP932表示すると文字化け → Firestore内のデータ自体はUTF-8で正しい。フロントエンドでの表示には影響なし
 
 ### Phase 3: CLI統合（Evaluate） ✅
 - [x] `scripts/evaluate.py`: `run_evaluation()` に `on_progress` / `should_cancel` コールバックを渡してタスク状態を更新
