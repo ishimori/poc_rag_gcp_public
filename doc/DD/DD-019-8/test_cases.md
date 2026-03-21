@@ -1,32 +1,32 @@
 # DD-019-8: テストケースデータ
 
-## 成功ケース（2件）
+## 成功ケース（8件 — 対策後）
 
-| ID | クエリ | 期待ソース |
-|---|---|---|
-| semantic-005 | Zoomは使える？ | it_helpdesk_faq.md |
-| semantic-007 | USBメモリを使いたい | it_helpdesk_faq.md |
+| ID | クエリ | 期待ソース | 備考 |
+|---|---|---|---|
+| semantic-001 | PCが重い | pc_troubleshoot.md | 対策後に改善 |
+| semantic-003 | 画面が固まった | pc_troubleshoot.md | 対策後に改善 |
+| semantic-004 | テレワークで使えるネット回線の速度は？ | it_helpdesk_faq.md | 対策後に改善 |
+| semantic-005 | Zoomは使える？ | it_helpdesk_faq.md | 対策前から成功 |
+| semantic-006 | パスワードの条件は？ | it_helpdesk_faq.md | 対策後に改善 |
+| semantic-007 | USBメモリを使いたい | it_helpdesk_faq.md | 対策前から成功 |
+| semantic-008 | ウイルスに感染したかもしれない | it_helpdesk_faq.md | 対策後に改善 |
+| semantic-009 | フィッシングメールが来た | it_helpdesk_faq.md | 対策後に改善 |
 
-## 失敗ケース一覧（10件）
+## 失敗ケース一覧（4件 — 対策後も未解決）
 
 | ID | クエリ | 期待ソース | 回答 |
 |---|---|---|---|
-| semantic-001 | PCが重い | pc_troubleshoot.md | 情報なし |
 | semantic-002 | メールが送れない | it_helpdesk_faq.md | 情報なし |
-| semantic-003 | 画面が固まった | pc_troubleshoot.md | 情報なし |
-| semantic-004 | テレワークで使えるネット回線の速度は？ | it_helpdesk_faq.md | 情報なし |
-| semantic-006 | パスワードの条件は？ | it_helpdesk_faq.md | 情報なし |
-| semantic-008 | ウイルスに感染したかもしれない | it_helpdesk_faq.md | 情報なし |
-| semantic-009 | フィッシングメールが来た | it_helpdesk_faq.md | 情報なし |
 | semantic-010 | 新しいソフトを入れたい | it_helpdesk_faq.md | 情報なし |
 | semantic-011 | タクシー代を会社に請求したい | expense_manual.md | 情報なし |
 | semantic-012 | 社外秘の書類を捨てたい | security_policy.md | 情報なし |
 
-## 代表3件（詳細分析対象）
+## 代表3件（詳細分析対象 — 対策前の選定）
 
-- **semantic-001**「PCが重い」— 最も曖昧な口語クエリ（期待: pc_troubleshoot.md）
-- **semantic-006**「パスワードの条件は？」— 比較的明確なクエリ（期待: it_helpdesk_faq.md）
-- **semantic-011**「タクシー代を会社に請求したい」— カテゴリ違い（期待: expense_manual.md）
+- **semantic-001**「PCが重い」— 最も曖昧な口語クエリ（期待: pc_troubleshoot.md）→ **対策後に成功**
+- **semantic-006**「パスワードの条件は？」— 比較的明確なクエリ（期待: it_helpdesk_faq.md）→ **対策後に成功**
+- **semantic-011**「タクシー代を会社に請求したい」— カテゴリ違い（期待: expense_manual.md）→ 未解決
 
 ## 初期仮説
 

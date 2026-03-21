@@ -15,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DD_PATH = ROOT / "doc" / "DD" / "DD-019-8_semanticテスト失敗の原因分析.md"
+DD_TEST_CASES_PATH = ROOT / "doc" / "DD" / "DD-019-8" / "test_cases.md"
 EVAL_DATASET = ROOT / "test-data" / "golden" / "eval_dataset.jsonl"
 RESULTS_DIR = ROOT / "results"
 
@@ -58,7 +59,7 @@ def load_latest_results() -> dict[str, bool]:
 
 def parse_dd_table(section_name: str, dd_text: str) -> list[dict]:
     """DD内のMarkdownテーブルからケース情報を抽出する。"""
-    pattern = rf"### {re.escape(section_name)}.*?\n\n\|.*?\|\n\|[-| ]+\|\n((?:\|.*?\|\n)*)"
+    pattern = rf"##+ {re.escape(section_name)}.*?\n\n\|.*?\|\n\|[-| ]+\|\n((?:\|.*?\|\n)*)"
     match = re.search(pattern, dd_text, re.DOTALL)
     if not match:
         return []
@@ -87,6 +88,9 @@ def main() -> int:
     warnings: list[str] = []
 
     dd_text = DD_PATH.read_text(encoding="utf-8")
+    # テーブルが別ファイルに分離されている場合はそちらも読み込む
+    if DD_TEST_CASES_PATH.exists():
+        dd_text += "\n" + DD_TEST_CASES_PATH.read_text(encoding="utf-8")
     eval_cases = load_eval_cases()
     eval_results = load_latest_results()
 
