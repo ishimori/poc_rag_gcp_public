@@ -44,12 +44,16 @@ def _merge_by_rrf(
     return [replace(chunk_map[key], score=rrf_scores[key]) for key in sorted_keys]
 
 
-def hybrid_search(query: str, top_k: int | None = None) -> list[SearchResult]:
+def hybrid_search(
+    query: str,
+    top_k: int | None = None,
+    user_groups: list[str] | None = None,
+) -> list[SearchResult]:
     """ベクトル検索 + キーワード検索 → RRF統合"""
     k = top_k or config.top_k
 
     # 両方の検索を実行
-    vector_results = vector_search(query, top_k=k)
+    vector_results = vector_search(query, top_k=k, user_groups=user_groups)
     keyword_results = keyword_search(query, top_k=k)
 
     # RRF統合

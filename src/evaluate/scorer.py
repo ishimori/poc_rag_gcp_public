@@ -52,6 +52,7 @@ FEATURE_MAP: dict[str, str | None] = {
     "header_injection": "header_injection",  # config.header_injection
     "metadata_scoring": "metadata_scoring",  # メタデータスコアリング
     "contextual_retrieval": "contextual_retrieval",  # 文脈説明の自動付与
+    "hybrid_search": "hybrid_search",  # ハイブリッド検索
 }
 
 

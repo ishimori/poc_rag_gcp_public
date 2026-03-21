@@ -7,6 +7,7 @@ from google.cloud.firestore_v1.vector import Vector
 
 from src.config import config
 from src.ingest.chunker import Chunk
+from src.search.keyword_searcher import invalidate_chunk_cache
 
 _db: firestore.Client | None = None
 
@@ -65,6 +66,7 @@ def store_chunks(chunks: list[Chunk], embeddings: list[list[float]]) -> dict[str
 
         batch.commit()
 
+    invalidate_chunk_cache()
     return {"stored": stored, "skipped": skipped}
 
 
@@ -85,4 +87,5 @@ def clear_collection() -> int:
         batch.commit()
         deleted += len(doc_list[i : i + batch_size])
 
+    invalidate_chunk_cache()
     return deleted

@@ -7,6 +7,7 @@ from vertexai.generative_models import GenerativeModel
 
 from src.config import config
 from src.search.clarifier import detect_ambiguity
+from src.search.hybrid import hybrid_search
 from src.search.metadata_scorer import apply_metadata_scores
 from src.search.reranker import rerank
 from src.search.retriever import SearchResult, vector_search
@@ -59,9 +60,13 @@ def rag_flow(
             )
         print("  [Clarifier] Query is clear, proceeding to search")
 
-    # Step 1: ベクトル検索（権限フィルタ付き）
-    search_results = vector_search(query, user_groups=user_groups)
-    print(f"  [Search] {len(search_results)} results")
+    # Step 1: 検索（ハイブリッド or ベクトルのみ）
+    if config.hybrid_search:
+        search_results = hybrid_search(query, user_groups=user_groups)
+        print(f"  [HybridSearch] {len(search_results)} results")
+    else:
+        search_results = vector_search(query, user_groups=user_groups)
+        print(f"  [VectorSearch] {len(search_results)} results")
 
     # Step 2: リランキング
     reranked_results = rerank(query, search_results)
