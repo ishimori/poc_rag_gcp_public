@@ -7,6 +7,14 @@
         { "fieldPath": "no_answer", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "chunks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "source_file", "order": "ASCENDING" },
+        { "fieldPath": "chunk_index", "order": "ASCENDING" }
+      ]
     }
   ]
 }
