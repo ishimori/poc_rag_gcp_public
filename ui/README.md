@@ -1,73 +1,43 @@
-# React + TypeScript + Vite
+# フロントエンド (ui/)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite によるチャット画面・管理画面。
 
-Currently, two official plugins are available:
+## 画面構成
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### チャット画面 (`/`)
 
-## React Compiler
+| ファイル | 説明 |
+|---------|------|
+| src/App.tsx | RAGチャットインターフェース（モデル選択、ソース表示） |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 管理画面 (`/admin/*`)
 
-## Expanding the ESLint configuration
+| ファイル | 説明 |
+|---------|------|
+| src/admin/AdminLayout.tsx | 管理画面レイアウト（サイドナビ） |
+| src/admin/Dashboard.tsx | ダッシュボード（スコア、技術マップ） |
+| src/admin/Tuning.tsx | パラメータ調整・Ingest・Evaluate 実行 |
+| src/admin/DataBrowser.tsx | Firestore チャンク閲覧・フィルタ |
+| src/admin/History.tsx | 評価履歴・比較 |
+| src/admin/Logs.tsx | クエリログ分析 |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 共通
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+| ファイル | 説明 |
+|---------|------|
+| src/main.tsx | React Router ルーティング定義 |
+| src/admin/api.ts | バックエンド API 呼び出し |
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 開発
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev          # 開発サーバー（port 5180）
+npm run build        # ui/dist/ に出力
+npx tsc -b           # 型チェック
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 関連ドキュメント
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- [画面仕様](../doc/spec/app/screens.md)
+- [API仕様](../doc/spec/app/api.md)

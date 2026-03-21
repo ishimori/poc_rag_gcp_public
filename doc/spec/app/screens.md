@@ -1,233 +1,69 @@
-# 画面設計書
+# 画面設計
 
-> 最終更新: 2026-03-21 | 対応DD: DD-012
+> 最終更新: 2026-03-21 | 対応DD: DD-012, DD-012-2
 
-## ルーティング構成
+## このプロジェクトの2つの顔
 
+本システムは**2種類のユーザー**に向けた画面を持つ:
+
+| ユーザー | 画面 | 目的 |
+|---------|------|------|
+| 一般社員 | チャット（`/`） | 社内ドキュメントについてAIに質問する |
+| RAG開発者 | 管理画面（`/admin/*`） | RAGパイプラインの精度を計測・チューニングする |
+
+チャット画面は「RAGの成果物」、管理画面は「RAGを育てるツール」。
+
+## チューニングサイクル（管理画面の核心）
+
+管理画面の存在意義は、RAGの精度改善を**仮説検証サイクル**として回せることにある:
+
+```mermaid
+graph LR
+    A[パラメータ変更<br/>Tuning] --> B[再インジェスト<br/>Tuning]
+    B --> C[評価実行<br/>Tuning]
+    C --> D[結果比較<br/>History]
+    D --> E{スコア改善?}
+    E -->|Yes| F[次の仮説へ]
+    E -->|No| G[パラメータ戻す]
+    F --> A
+    G --> A
 ```
-BrowserRouter
-├── /                    → App（チャット画面）
-└── /admin               → AdminLayout（管理画面レイアウト）
-    ├── index            → Dashboard
-    ├── /admin/tuning    → Tuning
-    ├── /admin/data      → DataBrowser
-    ├── /admin/history   → History
-    └── /admin/logs      → Logs
+
+**例**: 「chunk_sizeを800→600に変えたら、semantic検索のスコアは上がるか？」
+→ Tuningでパラメータ変更 → Re-tune実行 → Historyで前回と比較 → 判断
+
+## 画面遷移
+
+```mermaid
+graph TB
+    Chat["/ チャット"] -->|"Admin →"| Dashboard
+    subgraph Admin ["/admin 管理画面"]
+        Dashboard["Dashboard<br/>全体の健康状態"]
+        Tuning["Tuning<br/>パラメータ調整・実行"]
+        Data["Data Browser<br/>チャンクの中身確認"]
+        History["History<br/>評価結果の比較"]
+        Logs["Logs<br/>実クエリの分析"]
+        Dashboard --- Tuning --- Data --- History --- Logs
+    end
+    Dashboard -->|"← Chat"| Chat
 ```
 
-**実装**: `ui/src/main.tsx` — React Router v7（`react-router-dom`）
+## 各画面の役割
 
-### ナビゲーション
+### チャット（`/`）
+ユーザーが質問を入力し、RAGパイプラインが検索・回答する。回答にはソース文書の参照が付く。**ここでの体験品質が、管理画面で改善すべき対象そのもの。**
 
-- チャット → 管理画面: ヘッダーの「Admin →」リンク
-- 管理画面 → チャット: サイドナビの「← Chat」リンク
-- 管理画面内: サイドナビの `NavLink`（アクティブ状態のハイライトあり）
+### Dashboard（`/admin`）
+RAGの「今の状態」を一目で把握する画面。全体スコア、テストタイプ別のスコア分布、チャンク数。**「どこが弱いか」を見つけて、Tuningでの仮説を立てる起点。**
 
----
+### Tuning（`/admin/tuning`）
+パラメータを変更し、Ingest→Evaluateを実行する画面。**チューニングサイクルの操作をすべてここで行える。** Re-tuneボタンで一括実行も可能。
 
-## 1. チャット画面（`/`）
+### History（`/admin/history`）
+過去の評価結果を時系列で並べ、Before/Afterを選んで比較する画面。パラメータの差分とスコアの変動を対比し、**「この変更は効果があったか？」を判断する。**
 
-**コンポーネント**: `ui/src/App.tsx`
+### Data Browser（`/admin/data`）
+Firestoreに格納されたチャンクの中身を閲覧する画面。カテゴリ・セキュリティレベルでフィルタ可能。**「チャンクの切れ方は適切か？」「ヘッダーインジェクションは効いているか？」の目視確認用。**
 
-**使用API**: `POST /api`
-
-### 構成
-
-| 領域 | 内容 |
-|------|------|
-| ヘッダー | タイトル「エンタープライズRAG PoC」+ Admin リンク |
-| サイドバー | モデル選択（ラジオボタン）+ サンプル質問（4件） |
-| チャットエリア | メッセージ一覧 + 入力欄 |
-
-### モデル選択
-
-| モデル | 表示名 | 価格（per 1M tokens） | ラベル |
-|--------|--------|---------------------|-------|
-| `gemini-2.5-flash` | Gemini 2.5 Flash | $0.15 / $0.60 | 低コスト |
-| `gemini-2.5-pro` | Gemini 2.5 Pro | $1.25 / $10.00 | 高性能 |
-
-### サンプル質問
-
-1. 「ネジ999999の材質は？」
-2. 「VPN接続の手順を教えて」
-3. 「PCが重い」
-4. 「有給休暇は何日もらえる？」
-
-### メッセージ表示
-
-- **ユーザー**: テキストのみ
-- **アシスタント**: Markdown レンダリング（`react-markdown`）+ メタ情報（モデル名、応答時間）
-- **参照ソース**: 折りたたみ式リスト（ファイル名#チャンク番号、スコア、内容先頭120文字）
-- **ローディング**: 「検索・回答生成中...」表示
-- **自動スクロール**: 新メッセージ追加時に最下部へスクロール
-
----
-
-## 2. Dashboard（`/admin`）
-
-**コンポーネント**: `ui/src/admin/Dashboard.tsx`
-
-**使用API**: `GET /api/admin/config`, `GET /api/admin/evaluate/results`, `GET /api/admin/chunks`
-
-### 構成
-
-| セクション | 内容 |
-|-----------|------|
-| スコアカード | 全体スコア（%）、チャンク数、現在のパラメータ |
-| テストタイプ別スコア | 10パターンのスコア表（スコア、件数、評価バッジ） |
-| 技術マップ | 13の対策技術一覧（実装済み / 調査済み、改善対象テストタイプとの対応） |
-
-### スコア評価基準
-
-| スコア | ラベル | バッジ |
-|--------|-------|-------|
-| ≥ 90% | 優秀 | ◎ |
-| ≥ 70% | 良好 | ○ |
-| ≥ 50% | 改善余地あり | △ |
-| < 50% | 要対策 | ✕ |
-
-### テストタイプ（10パターン）
-
-| キー | 表示名 | 説明 |
-|------|--------|------|
-| exact_match | 完全一致 | 型番・固有名詞を正確に特定できるか |
-| similar_number | 類似数値の区別 | 似た番号を混同しないか |
-| semantic | 意味検索 | 言い換え・類義語に対応できるか |
-| step_sequence | 手順再現 | 操作手順を正しい順序で返せるか |
-| multi_chunk | 複数チャンク統合 | 複数の文書断片を横断して統合できるか |
-| unanswerable | 回答不能判定 | 文書にない質問に「分かりません」と言えるか |
-| ambiguous | 曖昧質問対応 | 曖昧な質問に適切に対応できるか |
-| cross_category | カテゴリ横断 | 異なる分野の文書を横断して回答できるか |
-| security | セキュリティ | 権限外の情報を適切にブロックできるか |
-| noise_resistance | ノイズ耐性 | 無関係な情報の中から正しい情報を抽出できるか |
-
----
-
-## 3. Tuning（`/admin/tuning`）
-
-**コンポーネント**: `ui/src/admin/Tuning.tsx`
-
-**使用API**: `GET /api/admin/config`, `PUT /api/admin/config`, `POST /api/admin/ingest`, `POST /api/admin/evaluate`
-
-### 構成
-
-| セクション | 内容 |
-|-----------|------|
-| 操作フロー | ① パラメータ変更 → ② Re-tune → ③ History で比較（1行インフォボックス） |
-| Technique Toggles | 技術のON/OFF切替（header_injection, リランキング）で効果を測定 |
-| パラメータ編集 | 6パラメータの入力フォーム + Save ボタン |
-| インジェスト | Clear チェックボックス + Run Ingest ボタン + 結果表示 |
-| 評価 | Run Evaluate ボタン + スコア結果表示（タイプ別） |
-| Re-tune | ワンクリックで Save → Ingest(clear) → Evaluate を順次実行 |
-
-### Technique Toggles
-
-| トグル | 対応パラメータ | 説明 |
-|--------|-------------|------|
-| 02 ヘッダーインジェクション | `header_injection` | OFF時は再インジェスト必要の警告表示 |
-| 04 リランキング | `rerank_top_n` | OFF = `rerank_top_n` を `top_k` と同値にして無効化 |
-
-### パラメータ編集
-
-| パラメータ | 入力タイプ | 説明 |
-|-----------|-----------|------|
-| chunk_size | number | チャンク分割の最大文字数 |
-| chunk_overlap | number | チャンク間のオーバーラップ文字数 |
-| header_injection | boolean (toggle) | チャンク先頭にタイトルを付与するか |
-| top_k | number | ベクトル検索の取得件数 |
-| rerank_top_n | number | リランキング後の最終件数 |
-| rerank_threshold | number (step=0.01) | リランキングスコアの最低閾値 |
-
-### ステータス管理
-
-各操作（config保存、ingest、evaluate、re-tune）は `idle` / `loading` / `success` / `error` の4状態で管理。
-
----
-
-## 4. Data Browser（`/admin/data`）
-
-**コンポーネント**: `ui/src/admin/DataBrowser.tsx`
-
-**使用API**: `GET /api/admin/chunks`
-
-### 構成
-
-| セクション | 内容 |
-|-----------|------|
-| フィルタ | Category（select）、Security Level（select）、Limit（number）+ Fetch Data ボタン |
-| チャンク一覧 | テーブル（source_file, chunk_index, category, security_level, content先頭50文字） |
-| 詳細表示 | 行クリックで全文表示（id, content全文, category, security_level, allowed_groups） |
-
-### フィルタ選択肢
-
-**Category**: All / parts_catalog / it_helpdesk / hr_policy / finance / network
-
-**Security Level**: All / public / internal / confidential
-
-### カラータグ
-
-カテゴリとセキュリティレベルにはCSSクラスによるカラータグを表示。
-
----
-
-## 5. History（`/admin/history`）
-
-**コンポーネント**: `ui/src/admin/History.tsx`
-
-**使用API**: `GET /api/admin/evaluate/results`
-
-### 構成
-
-| セクション | 内容 |
-|-----------|------|
-| ガイド | 使い方説明（2件にチェックで比較表示） |
-| 評価結果一覧 | テーブル（Before/Afterラジオ、日時、スコア%、passed/total、パラメータ値） |
-| Compare | Before/After選択時に表示（パラメータ差分 + スコアΔ + 自動解釈） |
-| タイプ別詳細 | 行クリックで展開（テストタイプ別スコア表 + トレンドバー） |
-
-### テーブルカラム
-
-| カラム | 内容 |
-|--------|------|
-| Before | ラジオボタン（比較元の選択） |
-| After | ラジオボタン（比較先の選択） |
-| Date | 評価日時（秒まで） |
-| Score | 全体スコア%（50%以上: 緑、未満: 赤） |
-| Passed | 合格数/全体数 |
-| chunk_size | パラメータ値 |
-| overlap | パラメータ値 |
-| top_k | パラメータ値 |
-| rerank_top_n | パラメータ値 |
-| threshold | パラメータ値 |
-
-### Compare表示（CompareViewコンポーネント）
-
-- **自動解釈**: 変更内容の要約、改善/悪化タイプの一覧、推奨アクション（効果的/低下/変化なし）
-- **テストケース数変更検知**: total が異なる場合は単純比較不可の警告を表示
-- **パラメータ差分表**: 変更ありのパラメータをハイライト（黄背景）、差分を↑↓で表示
-- **スコア差分表**: 全体 + タイプ別のΔ（緑=改善、赤=悪化）
-
----
-
-## 6. Logs（`/admin/logs`）
-
-**コンポーネント**: `ui/src/admin/Logs.tsx`
-
-**使用API**: `GET /api/admin/logs`
-
-### 構成
-
-| セクション | 内容 |
-|-----------|------|
-| フィルタ | No-answer only（チェックボックス）、Limit（number）+ Fetch ボタン |
-| ログ一覧 | テーブル（日時、クエリ先頭40文字、モデル、応答時間、ソース数、no_answer） |
-| 詳細表示 | 行クリックで展開（クエリ全文、回答全文、ソース一覧） |
-
-### 初期動作
-
-- ページ表示時に自動で `handleFetch()` を呼び出し（`useEffect`）
-- デフォルト: no_answer フィルタなし、limit=50
-
-### タイムスタンプ表示
-
-- `ja-JP` ロケール、`Asia/Tokyo` タイムゾーンで表示
+### Logs（`/admin/logs`）
+実際のユーザークエリと回答のログ。no_answer（回答不能）フィルタあり。**「実運用でどんな質問が来ていて、どこで失敗しているか」を把握する。**

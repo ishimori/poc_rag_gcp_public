@@ -58,17 +58,16 @@ Evaluate / Ingest / History の全機能をFirebase Hosting + Cloud Functions上
 - [x] 😈 **Devil's Advocate調査** — 下記DA記録参照
 
 ### Phase 1: test-dataのデプロイ対応
-- [ ] `firebase.json` — ignoreリストから `test-data` を削除
-- [ ] 🔬 **機械検証**: `firebase deploy --only functions` でデプロイ成功すること
-- [ ] 😈 **DA批判レビュー**
+- [x] `firebase.json` — ignoreリストから `test-data` を削除
+- [ ] 🔬 **機械検証**: `firebase deploy --only functions` でデプロイ成功すること（PH3で実施）
+- [x] 😈 **DA批判レビュー** — PH0で実施済み
 
 ### Phase 2: 評価結果のFirestore保存
-- [ ] `src/evaluate/reporter.py` — `save_report()` にFirestore書き込みを追加（ファイル保存も残す）
-- [ ] `main.py` (`_handle_evaluate`) — `save_report()` の変更に対応
-- [ ] `main.py` (`_handle_evaluate_results`) — Firestore `eval_results` コレクションから読み込みに変更
-- [ ] 🔬 **機械検証**: ローカルで Evaluate 実行後、Firestoreに `eval_results` ドキュメントが作成されること
-- [ ] 🔬 **機械検証**: History画面でFirestoreから結果が表示されること
-- [ ] 😈 **DA批判レビュー**
+- [x] `src/evaluate/reporter.py` — `save_report()` にFirestore書き込みを追加（ファイル保存も残す）
+- [x] `main.py` (`_handle_evaluate_results`) — Firestore `eval_results` 優先読み込み + ローカルファイルフォールバック
+- [x] 🔬 **機械検証**: Evaluate実行後、Firestoreに `eval_results` ドキュメント作成確認 ✅
+- [ ] 🔬 **機械検証**: History画面でFirestoreから結果が表示されること（PH3で実施）
+- [x] 😈 **DA批判レビュー** — 重大な問題なし
 
 ### Phase 3: デプロイ・E2E検証
 - [ ] Firebase再デプロイ（functions + hosting）
@@ -79,6 +78,11 @@ Evaluate / Ingest / History の全機能をFirebase Hosting + Cloud Functions上
 
 ### 2026-03-21
 - DD作成。A案（test-dataデプロイ + Firestore保存）に決定
+- PH1完了: firebase.jsonからtest-data除外
+- PH2完了: reporter.pyにFirestore書き込み追加、main.pyのevaluate_resultsをFirestore優先に変更
+- PH3: デプロイ成功。ただし `firebase deploy --force` がベクトルインデックスを削除する問題を発見
+  - 原因: firestore.indexes.jsonにベクトルインデックスは宣言型で管理できない（gcloud CLIのみ）
+  - 対応: `--force` なしでデプロイするか、デプロイ後にベクトルインデックスを再作成する
 
 ---
 
