@@ -206,20 +206,32 @@ export default function Tuning() {
                 onChange={(e) => setIngestClear(e.target.checked)}
                 disabled={isRunning}
               />
-              Clear before ingest
+              既存データを全削除してから取り込む
+              <span className="admin-param-hint" style={{ display: 'block', marginLeft: '24px' }}>
+                {ingestClear
+                  ? 'ON: DBを空にしてから全文書を再取り込み（パラメータ変更時はこちら）'
+                  : 'OFF: 新規・変更分だけ追加（既存データはそのまま）'}
+              </span>
             </label>
             <button className="admin-btn" onClick={handleIngest} disabled={isRunning || isProd}>
-              {ingestStatus === 'loading' ? 'Ingesting...' : 'Run Ingest'}
+              {ingestStatus === 'loading' ? '取り込み中...' : 'データ取り込み（Ingest）'}
             </button>
+            <span className="admin-param-hint">ソース文書を分割・ベクトル化してDBに格納する</span>
           </div>
 
-          <button className="admin-btn" onClick={handleEvaluate} disabled={isRunning || isProd}>
-            {evalStatus === 'loading' ? 'Evaluating...' : 'Run Evaluate'}
-          </button>
+          <div className="admin-action-group">
+            <button className="admin-btn" onClick={handleEvaluate} disabled={isRunning || isProd}>
+              {evalStatus === 'loading' ? '評価中...' : '精度評価（Evaluate）'}
+            </button>
+            <span className="admin-param-hint">テストケースで質問→回答し、正答率を測定する</span>
+          </div>
 
-          <button className="admin-btn admin-btn-primary" onClick={handleRetune} disabled={isRunning || isProd}>
-            {retuneStatus === 'loading' ? 'Re-tuning...' : 'Re-tune (Save → Ingest → Evaluate)'}
-          </button>
+          <div className="admin-action-group">
+            <button className="admin-btn admin-btn-primary" onClick={handleRetune} disabled={isRunning || isProd}>
+              {retuneStatus === 'loading' ? 'Re-tune中...' : '一括実行（パラメータ保存 → 取り込み → 評価）'}
+            </button>
+            <span className="admin-param-hint">上の3ステップをまとめて実行する</span>
+          </div>
         </div>
       </div>
 
