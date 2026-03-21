@@ -9,6 +9,20 @@
   padding: 12px 24px;
   border-bottom: 1px solid #e0e0e0;
   background: #f8f9fa;
+  position: relative;
+}
+
+.header-admin-link {
+  position: absolute;
+  top: 12px;
+  right: 24px;
+  font-size: 0.82rem;
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.header-admin-link:hover {
+  text-decoration: underline;
 }
 
 .header h1 {

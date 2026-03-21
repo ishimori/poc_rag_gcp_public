@@ -20,15 +20,9 @@ interface Message {
 
 const MODELS = [
   {
-    id: 'gemini-3.1-flash-lite-preview',
-    label: 'Gemini 3.1 Flash Lite',
-    price: '$0.10 / $0.40',
-    tier: '最安',
-  },
-  {
-    id: 'gemini-3-flash-preview',
-    label: 'Gemini 3 Flash',
-    price: '$0.50 / $3.00',
+    id: 'gemini-2.5-flash',
+    label: 'Gemini 2.5 Flash',
+    price: '$0.15 / $0.60',
     tier: '低コスト',
   },
   {
@@ -36,12 +30,6 @@ const MODELS = [
     label: 'Gemini 2.5 Pro',
     price: '$1.25 / $10.00',
     tier: '高性能',
-  },
-  {
-    id: 'gemini-3.1-pro-preview',
-    label: 'Gemini 3.1 Pro',
-    price: '$2.00 / $12.00',
-    tier: '最高性能',
   },
 ]
 
@@ -112,6 +100,7 @@ export default function App() {
       <header className="header">
         <h1>エンタープライズRAG PoC</h1>
         <p>社内ドキュメントに基づいて質問に回答します</p>
+        <a href="/admin" className="header-admin-link">Admin →</a>
       </header>
 
       <div className="main">

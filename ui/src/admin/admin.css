@@ -87,6 +87,24 @@
   font-size: 0.85rem;
 }
 
+.admin-guide {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: #e8f0fe;
+  border-left: 4px solid #1a73e8;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.85rem;
+  color: #333;
+  line-height: 1.5;
+}
+
+.admin-section-desc {
+  margin: -4px 0 12px;
+  font-size: 0.82rem;
+  color: #666;
+  line-height: 1.5;
+}
+
 .admin-muted {
   color: #999;
   font-size: 0.9rem;
@@ -131,6 +149,126 @@
   font-size: 0.75rem;
   color: #999;
   margin-top: 8px;
+}
+
+.admin-card-help {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+  font-size: 0.75rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+.admin-score-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Card border accent by score level */
+.card-badge-excellent { border-left: 4px solid #1e7e34; }
+.card-badge-good { border-left: 4px solid #1a73e8; }
+.card-badge-fair { border-left: 4px solid #b06000; }
+.card-badge-poor { border-left: 4px solid #c5221f; }
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-excellent { background: #e6f4ea; color: #1e7e34; }
+.badge-good { background: #e8f0fe; color: #1a73e8; }
+.badge-fair { background: #fef7e0; color: #b06000; }
+.badge-poor { background: #fce8e6; color: #c5221f; }
+.badge-impl { background: #e6f4ea; color: #1e7e34; }
+.badge-research { background: #f1f3f4; color: #666; }
+.badge-unknown { background: #f1f3f4; color: #999; }
+
+/* Technology Map */
+.tech-map-table td { vertical-align: top; }
+
+.tech-id {
+  font-weight: 700;
+  color: #1a73e8;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.tech-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.tech-row-researched {
+  opacity: 0.65;
+}
+
+.tech-improves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tech-test-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.tech-ref-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.tech-ref-impl {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.tech-ref-research {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-legend {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: #555;
+}
+
+/* Type column */
+.type-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.type-key {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #999;
+}
+
+.type-desc {
+  font-size: 0.78rem;
+  color: #666;
+  max-width: 320px;
+  line-height: 1.4;
 }
 
 /* Config table in card */

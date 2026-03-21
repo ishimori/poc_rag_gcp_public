@@ -7,3 +7,6 @@ dist/
 results/
 data_cache/
 .dev-pids
+.firebase/
+.claude/settings.local.json
+.playwright-mcp/
