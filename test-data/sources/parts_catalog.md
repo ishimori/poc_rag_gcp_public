@@ -1,3 +1,8 @@
+---
+category: parts_catalog
+security_level: public
+allowed_groups: ["all"]
+---
 # 部品マスタカタログ 2026年版
 
 本カタログは当社で使用する標準部品の一覧です。各部品の詳細仕様は個別仕様書を参照してください。

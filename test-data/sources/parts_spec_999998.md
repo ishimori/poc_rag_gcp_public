@@ -1,3 +1,8 @@
+---
+category: parts_catalog
+security_level: public
+allowed_groups: ["all"]
+---
 # 部品仕様書: 999998 六角穴付きボルト M6×20
 
 ## 基本情報

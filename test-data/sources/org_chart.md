@@ -1,3 +1,8 @@
+---
+category: organization
+security_level: public
+allowed_groups: ["all"]
+---
 # 組織図（2026年4月版）
 
 ## 経営層

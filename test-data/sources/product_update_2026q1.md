@@ -1,3 +1,8 @@
+---
+category: product
+security_level: public
+allowed_groups: ["all"]
+---
 # プロダクトアップデート 2026年Q1
 
 発行日: 2026-03-15

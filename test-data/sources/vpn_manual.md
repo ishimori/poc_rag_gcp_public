@@ -1,3 +1,8 @@
+---
+category: it_helpdesk
+security_level: public
+allowed_groups: ["all"]
+---
 # VPN接続マニュアル
 
 社外から社内ネットワークに接続するためのVPN設定手順です。

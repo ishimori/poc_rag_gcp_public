@@ -1,9 +1,10 @@
 ---
-security_level: general
+security_level: public
 category: hr
+allowed_groups: ["all"]
 ---
 
-# 有給休暇規定
+# 年次有給休暇規程（2026年版）
 
 制定日: 2023-04-01
 最終改訂: 2025-10-01

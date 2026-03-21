@@ -29,18 +29,22 @@ def main():
         print(f"Deleted {deleted} documents.")
         print()
 
-    # ソースファイルの読み込み
-    files = sorted(
-        f for f in os.listdir(SOURCES_DIR) if f.endswith(".md")
-    )
+    # ソースファイルの読み込み（サブディレクトリも再帰的に走査）
+    files: list[tuple[str, str]] = []  # (relative_name, full_path)
+    for root, _dirs, fnames in os.walk(SOURCES_DIR):
+        for fname in sorted(fnames):
+            if fname.endswith(".md"):
+                full_path = os.path.join(root, fname)
+                rel = os.path.relpath(full_path, SOURCES_DIR).replace("\\", "/")
+                files.append((rel, full_path))
+    files.sort()
     print(f"Found {len(files)} source files.")
 
     total_chunks = 0
     total_stored = 0
     total_skipped = 0
 
-    for file_name in files:
-        file_path = os.path.join(SOURCES_DIR, file_name)
+    for file_name, file_path in files:
         with open(file_path, "r", encoding="utf-8") as f:
             text = f.read()
 

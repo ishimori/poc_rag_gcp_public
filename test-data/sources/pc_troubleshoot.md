@@ -1,3 +1,8 @@
+---
+category: it_helpdesk
+security_level: public
+allowed_groups: ["all"]
+---
 # PCトラブルシューティングFAQ
 
 よくある質問と対処法をまとめています。解決しない場合はITヘルプデスク（内線: 1111）にお問い合わせください。

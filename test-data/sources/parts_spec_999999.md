@@ -1,3 +1,8 @@
+---
+category: parts_catalog
+security_level: public
+allowed_groups: ["all"]
+---
 # 部品仕様書: 999999 六角穴付きボルト M8×25
 
 ## 基本情報

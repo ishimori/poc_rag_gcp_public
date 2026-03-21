@@ -98,12 +98,12 @@ export default function Tuning() {
 
   if (!config) return <div className="admin-page"><p>Loading...</p></div>
 
-  const PARAM_FIELDS: { key: keyof ConfigParams; label: string; step?: string }[] = [
-    { key: 'chunk_size', label: 'Chunk Size' },
-    { key: 'chunk_overlap', label: 'Chunk Overlap' },
-    { key: 'top_k', label: 'Top K' },
-    { key: 'rerank_top_n', label: 'Rerank Top N' },
-    { key: 'rerank_threshold', label: 'Rerank Threshold', step: '0.01' },
+  const PARAM_FIELDS: { key: keyof ConfigParams; label: string; hint: string; step?: string }[] = [
+    { key: 'chunk_size', label: 'Chunk Size', hint: '文書の分割サイズ（文字数）' },
+    { key: 'chunk_overlap', label: 'Chunk Overlap', hint: '分割時の重複文字数' },
+    { key: 'top_k', label: 'Top K', hint: '検索で取得する候補数' },
+    { key: 'rerank_top_n', label: 'Rerank Top N', hint: 'リランク後に残す件数' },
+    { key: 'rerank_threshold', label: 'Rerank Threshold', hint: 'リランクのスコア下限', step: '0.01' },
   ]
 
   return (
@@ -111,11 +111,15 @@ export default function Tuning() {
       <h1>Evaluation & Tuning</h1>
       {error && <div className="admin-error">{error}</div>}
 
+      <div className="admin-guide">
+        <strong>操作フロー:</strong> ① パラメータ変更 → ② Re-tune実行（Save → Ingest → Evaluate を一括実行）→ ③ Historyで前回と比較
+      </div>
+
       {/* Parameters */}
       <div className="admin-section">
         <h2>Parameters</h2>
         <div className="admin-param-grid">
-          {PARAM_FIELDS.map(({ key, label, step }) => (
+          {PARAM_FIELDS.map(({ key, label, hint, step }) => (
             <label key={key} className="admin-param">
               <span>{label}</span>
               <input
@@ -125,6 +129,7 @@ export default function Tuning() {
                 onChange={(e) => handleDraftChange(key, e.target.value)}
                 disabled={isRunning}
               />
+              <span className="admin-param-hint">{hint}</span>
             </label>
           ))}
         </div>

@@ -183,15 +183,21 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
 
     deleted = clear_collection() if should_clear else 0
 
-    files = sorted(f for f in os.listdir(sources_dir) if f.endswith(".md"))
+    files: list[tuple[str, str]] = []
+    for root, _dirs, fnames in os.walk(sources_dir):
+        for fname in sorted(fnames):
+            if fname.endswith(".md"):
+                full = os.path.join(root, fname)
+                rel = os.path.relpath(full, sources_dir).replace("\\", "/")
+                files.append((rel, full))
+    files.sort()
 
     total_chunks = 0
     total_stored = 0
     total_skipped = 0
     file_results = []
 
-    for file_name in files:
-        file_path = os.path.join(sources_dir, file_name)
+    for file_name, file_path in files:
         with open(file_path, "r", encoding="utf-8") as f:
             text = f.read()
 

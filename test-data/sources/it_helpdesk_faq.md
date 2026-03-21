@@ -1,3 +1,8 @@
+---
+category: it_helpdesk
+security_level: public
+allowed_groups: ["all"]
+---
 # ITヘルプデスクFAQ
 
 ITヘルプデスク（内線: 1111 / メール: helpdesk@example.com）への問い合わせで特に多い質問をまとめています。

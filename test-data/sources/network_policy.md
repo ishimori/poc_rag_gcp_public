@@ -1,3 +1,8 @@
+---
+category: it_helpdesk
+security_level: internal
+allowed_groups: ["all"]
+---
 # ネットワーク利用規定
 
 制定日: 2024-04-01

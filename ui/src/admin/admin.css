@@ -78,6 +78,22 @@
   color: #333;
 }
 
+.admin-guide {
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: #e8f0fe;
+  color: #1a56db;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+
+.admin-param-hint {
+  display: block;
+  font-size: 0.75em;
+  color: #888;
+  margin-top: 2px;
+}
+
 .admin-error {
   padding: 10px 14px;
   margin-bottom: 16px;
