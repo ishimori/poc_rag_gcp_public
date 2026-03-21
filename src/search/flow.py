@@ -69,7 +69,7 @@ def rag_flow(
         print(f"  [VectorSearch] {len(search_results)} results")
 
     # Step 1.5: 権限除外検出（Shadow Retrieval）
-    if config.permission_filter and user_groups and len(search_results) == 0:
+    if config.shadow_retrieval and config.permission_filter and user_groups and len(search_results) == 0:
         shadow_results = vector_search(query, user_groups=None)
         if len(shadow_results) > 0:
             print("  [PermissionCheck] FILTERED_BY_PERMISSION — access denied")

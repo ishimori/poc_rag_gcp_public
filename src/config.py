@@ -51,6 +51,7 @@ class Config:
 
     # Permission
     permission_filter: bool = True
+    shadow_retrieval: bool = True  # 権限除外検出（フィルタなし検索で差分判定）
     user_groups: list[str] = ["all"]
 
     # Answerability Gate
