@@ -20,9 +20,51 @@
 
 ## スコア推移サマリー
 
+```mermaid
+xychart-beta
+    title "RAG Overall Score 推移"
+    x-axis ["Baseline", "GrpA", "GrpB", "019-8", "019-8-2", "019-10/13"]
+    y-axis "Overall %" 0 --> 100
+    bar [28.4, 34.8, 50.0, 75.7, 81.1, 81.1]
+    line [28.4, 34.8, 50.0, 75.7, 81.1, 81.1]
 ```
-28.4% ──→ 34.8% ──→ 50.0% ──→ 75.7% ──→ 81.1% ──→ 81.1%
- ベース    GrpA      GrpB     DD-019-8   DD-019-8-2  DD-019-10/13
+
+```mermaid
+timeline
+    title RAG精度改善タイムライン（2026-03-20〜22）
+    section ベースライン
+        28.4% (21/74)
+        : チャンキング+ベクトル検索+リランキング+LLM-as-Judge
+        : DD-013までの基盤5技術
+    section グループA (+6.4pt)
+        34.8% (24/69)
+        : #11 メタデータスコアリング
+        : #07 聞き返し（ambiguous 0%→60%）
+        : #10 文脈説明の自動付与（再Ingest）
+        : ⚠ max_output_tokens=256で空レスポンス（2回再発）
+        : ⚠ 構文チェックだけで完了マーク（運用ルール見直し）
+    section グループB (+15.2pt)
+        50.0% (37/74)
+        : #06 ハイブリッド検索（exact 0%→75%、similar 33%→83%）
+        : #08 権限フィルタ（機構OK、security 0%のまま）
+        : ⚠ allowed_groups未設定でフィルタ不動作（DA発見）
+        : ⚠ 複合インデックス未作成でFAILED_PRECONDITION
+    section DD-019-8 (+25.7pt) 🔥最大改善
+        75.7% (56/74)
+        : embedding task_type指定（全カテゴリ波及）
+        : 一般語キーワード検索追加
+        : semantic 17%→67%（+50pt）
+        : ⚠ 根本原因を「チャンクサイズ」と誤予測→cosine分析で特定
+    section DD-019-8-2/7 (+5.4pt)
+        81.1% (60/74)
+        : キーワード検索の分割バグ修正
+        : #12 AIフィルタ（temporal 0%→100%）
+    section DD-019-10~13 (±0pt)
+        81.1% (60/74)
+        : ✅ ambiguous 60%→100%（Few-Shot+Judge改善）
+        : ✅ unanswerable 80%→100%
+        : △ security 0%→20%（Shadow Retrieval部分的）
+        : ❌ Multi-Query逆効果（-2.7pt）→OFFに戻し
 ```
 
 | # | 時点 | Overall | 差分 | 主要施策 | 評価ファイル |
