@@ -543,8 +543,20 @@
 }
 
 .admin-eval-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-weight: 600;
   margin-bottom: 8px;
+}
+
+.admin-btn-cancel {
+  color: #c5221f;
+  border-color: #c5221f;
+}
+
+.admin-btn-cancel:hover {
+  background: #fce8e6;
 }
 
 .admin-progress-bar {

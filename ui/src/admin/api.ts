@@ -100,6 +100,10 @@ export function getEvalStatus(): Promise<EvalProgress> {
   return request('/evaluate/status')
 }
 
+export function cancelEvaluate(): Promise<{ cancelled: boolean }> {
+  return request('/evaluate/cancel', { method: 'POST' })
+}
+
 export interface EvalResultSummary {
   file: string
   date: string

@@ -15,6 +15,7 @@ from src.evaluate.scorer import (
 from src.search.flow import rag_flow
 
 ProgressCallback = Callable[[int, int, EvalResult], None]
+CancelCheck = Callable[[], bool]
 
 
 def _format_time(seconds: float) -> str:
@@ -85,6 +86,7 @@ def run_case(eval_case: EvalCase) -> EvalResult:
 def run_evaluation(
     cases: list[EvalCase],
     on_progress: ProgressCallback | None = None,
+    should_cancel: CancelCheck | None = None,
 ) -> list[EvalResult]:
     """全評価ケースを実行する"""
     results: list[EvalResult] = []
@@ -93,6 +95,10 @@ def run_evaluation(
     active_count = 0
 
     for i, eval_case in enumerate(cases, 1):
+        if should_cancel and should_cancel():
+            print(f"\n  Cancelled at {i - 1}/{total} cases.")
+            break
+
         result = run_case(eval_case)
         elapsed = time.time() - start_time
         elapsed_str = _format_time(elapsed)

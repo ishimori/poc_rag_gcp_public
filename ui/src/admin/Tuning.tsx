@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  getConfig, updateConfig, runIngest, runEvaluate, getSources, getEvalStatus,
+  getConfig, updateConfig, runIngest, runEvaluate, getSources, getEvalStatus, cancelEvaluate,
   type ConfigParams, type EvalProgress, type EvalReport, type IngestResult, type SourceFile,
 } from './api'
 
@@ -24,6 +24,8 @@ export default function Tuning() {
   const [evalStatus, setEvalStatus] = useState<Status>('idle')
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null)
   const [evalProgress, setEvalProgress] = useState<EvalProgress | null>(null)
+  // 画面再オープン時に既存ジョブを検出した場合、POSTレスポンスは受け取れない
+  const [evalDetached, setEvalDetached] = useState(false)
 
   const [retuneStatus, setRetuneStatus] = useState<Status>('idle')
 
@@ -39,6 +41,15 @@ export default function Tuning() {
       setDraft(c)
     }).catch((e) => setError(e.message))
     getSources().then((res) => setSourceFiles(res.files)).catch(() => {})
+
+    // マウント時に実行中ジョブを検出
+    getEvalStatus().then((status) => {
+      if (status.running) {
+        setEvalStatus('loading')
+        setEvalProgress(status)
+        setEvalDetached(true)
+      }
+    }).catch(() => {})
   }, [])
 
   // Evaluate進捗ポーリング
@@ -48,6 +59,11 @@ export default function Tuning() {
         try {
           const status = await getEvalStatus()
           setEvalProgress(status)
+          // detachedモード: ポーリングで完了を検出
+          if (evalDetached && !status.running) {
+            setEvalStatus('success')
+            setEvalDetached(false)
+          }
         } catch {
           // ポーリング失敗は無視（バックエンドが忙しい場合がある）
         }
@@ -58,9 +74,11 @@ export default function Tuning() {
         clearInterval(pollRef.current)
         pollRef.current = null
       }
-      setEvalProgress(null)
+      if (evalStatus !== 'loading') {
+        setEvalProgress(null)
+      }
     }
-  }, [evalStatus])
+  }, [evalStatus, evalDetached])
 
   function handleDraftChange(key: keyof ConfigParams, value: string) {
     setDraft((prev) => ({ ...prev, [key]: key === 'rerank_threshold' ? parseFloat(value) : parseInt(value) }))
@@ -94,6 +112,7 @@ export default function Tuning() {
   async function handleEvaluate() {
     setEvalStatus('loading')
     setEvalReport(null)
+    setEvalDetached(false)
     try {
       const res = await runEvaluate()
       setEvalReport(res.report)
@@ -104,9 +123,18 @@ export default function Tuning() {
     }
   }
 
+  async function handleCancel() {
+    try {
+      await cancelEvaluate()
+    } catch {
+      // キャンセル失敗は無視
+    }
+  }
+
   async function handleRetune() {
     setRetuneStatus('loading')
     setError('')
+    setEvalDetached(false)
     try {
       // 1. Save config
       await updateConfig(draft)
@@ -278,7 +306,8 @@ export default function Tuning() {
             {evalStatus === 'loading' && evalProgress && evalProgress.total > 0 && (
               <div className="admin-eval-progress">
                 <div className="admin-eval-progress-info">
-                  {evalProgress.current} / {evalProgress.total} 件完了
+                  <span>{evalProgress.current} / {evalProgress.total} 件完了</span>
+                  <button className="admin-btn-sm admin-btn-cancel" onClick={handleCancel}>中止</button>
                 </div>
                 <div className="admin-progress-bar">
                   <div

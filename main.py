@@ -159,6 +159,8 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         return _handle_evaluate(req)
     if path == "/evaluate/status" and method == "GET":
         return _handle_evaluate_status(req)
+    if path == "/evaluate/cancel" and method == "POST":
+        return _handle_evaluate_cancel(req)
     if path == "/evaluate/results" and method == "GET":
         return _handle_evaluate_results(req)
     if path == "/config" and method == "GET":
@@ -262,6 +264,7 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
 
 _eval_progress: dict = {
     "running": False,
+    "cancel": False,
     "current": 0,
     "total": 0,
     "current_id": "",
@@ -303,6 +306,7 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
     _eval_progress.update(
         {
             "running": True,
+            "cancel": False,
             "current": 0,
             "total": len(cases),
             "current_id": "",
@@ -311,6 +315,9 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
             "results": [],
         }
     )
+
+    def _should_cancel() -> bool:
+        return _eval_progress.get("cancel", False)
 
     def _on_progress(current: int, total: int, result) -> None:
         nonlocal active_count
@@ -341,8 +348,9 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
             }
         )
 
-    results = run_evaluation(cases, on_progress=_on_progress)
+    results = run_evaluation(cases, on_progress=_on_progress, should_cancel=_should_cancel)
     _eval_progress["running"] = False
+    _eval_progress["cancel"] = False
 
     report = generate_report(results)
     file_path = save_report(report)
@@ -358,6 +366,14 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
 def _handle_evaluate_status(req: https_fn.Request) -> https_fn.Response:
     """GET /evaluate/status — 評価進捗を返す"""
     return _json_response(_eval_progress)
+
+
+def _handle_evaluate_cancel(req: https_fn.Request) -> https_fn.Response:
+    """POST /evaluate/cancel — 評価を中止する"""
+    if not _eval_progress.get("running"):
+        return _json_response({"cancelled": False, "reason": "not running"})
+    _eval_progress["cancel"] = True
+    return _json_response({"cancelled": True})
 
 
 def _handle_evaluate_results(req: https_fn.Request) -> https_fn.Response:
