@@ -54,8 +54,10 @@ def chunk_document(text: str, file_name: str) -> list[Chunk]:
 
     chunks = []
     for i, doc in enumerate(docs):
-        # ヘッダーインジェクション（config で無効化可能）
-        if config.header_injection:
+        # contextual_retrieval ONの場合、header_injectionは付けない（contextualizer.pyが上位互換として処理）
+        if config.contextual_retrieval:
+            content = doc.page_content
+        elif config.header_injection:
             content = f"[{title}]\n{doc.page_content}"
         else:
             content = doc.page_content

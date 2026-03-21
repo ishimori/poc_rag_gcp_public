@@ -51,6 +51,7 @@ FEATURE_MAP: dict[str, str | None] = {
     "clarification": None,  # 聞き返し機能: 未実装
     "header_injection": "header_injection",  # config.header_injection
     "metadata_scoring": "metadata_scoring",  # メタデータスコアリング
+    "contextual_retrieval": "contextual_retrieval",  # 文脈説明の自動付与
 }
 
 

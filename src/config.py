@@ -18,6 +18,9 @@ class Config:
     chunk_overlap: int = 150
     header_injection: bool = True
 
+    # Contextual Retrieval
+    contextual_retrieval: bool = False  # ONの場合header_injectionより優先
+
     # Embedding
     embedding_model: str = "text-embedding-005"
     embedding_dimension: int = 768

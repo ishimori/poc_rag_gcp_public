@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import config
 from src.ingest.chunker import chunk_document
+from src.ingest.contextualizer import contextualize_chunks
 from src.ingest.embedder import embed_texts
 from src.ingest.store import clear_collection, store_chunks
 
@@ -51,6 +52,10 @@ def main():
         # チャンク分割
         chunks = chunk_document(text, file_name)
         print(f"  {file_name}: {len(chunks)} chunks")
+
+        # 文脈説明の自動付与（Contextual Retrieval）
+        if config.contextual_retrieval:
+            chunks = contextualize_chunks(chunks, text)
 
         # Embedding生成
         texts = [c.content for c in chunks]
