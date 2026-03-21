@@ -79,6 +79,12 @@
 |---------|------|
 | [20260320/](doc/presentation/20260320/) | RAG技術13選プレゼン（00〜13 + images/） |
 
+## 実施記録 (doc/record/)
+
+| ファイル | 説明 | 同期タイミング |
+|---------|------|---------------|
+| [rag_improvement_history.md](doc/record/rag_improvement_history.md) | RAG精度改善の全施策記録（スコア推移・失敗エピソード・構成変更） | フル評価実施時・施策追加時 |
+
 ## DD (doc/DD/)
 
 設計文書の進捗管理。→ [doc/DD/INDEX.md](doc/DD/INDEX.md)
