@@ -22,10 +22,15 @@ stop() {
       fi
     done < "$PIDFILE"
     rm -f "$PIDFILE"
-    echo "All services stopped."
-  else
-    echo "No running services found."
   fi
+  # PIDファイルで漏れた子プロセスも確実に停止
+  for port in $API_PORT $ADMIN_PORT; do
+    pid=$(lsof -ti :"$port" 2>/dev/null || true)
+    if [ -n "$pid" ]; then
+      kill -9 $pid 2>/dev/null && echo "Force killed process on port $port"
+    fi
+  done
+  echo "All services stopped."
 }
 
 start() {
@@ -68,5 +73,6 @@ start() {
 
 case "${1:-start}" in
   stop) stop ;;
+  restart) stop; start ;;
   start|*) start ;;
 esac
