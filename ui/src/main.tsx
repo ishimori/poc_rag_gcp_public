@@ -9,6 +9,7 @@ import Dashboard from './admin/Dashboard'
 import Tuning from './admin/Tuning'
 import History from './admin/History'
 import DataBrowser from './admin/DataBrowser'
+import Tests from './admin/Tests'
 import Logs from './admin/Logs'
 
 createRoot(document.getElementById('root')!).render(
@@ -20,6 +21,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="tuning" element={<Tuning />} />
+            <Route path="tests" element={<Tests />} />
             <Route path="data" element={<DataBrowser />} />
             <Route path="history" element={<History />} />
             <Route path="logs" element={<Logs />} />

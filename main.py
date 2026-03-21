@@ -161,6 +161,8 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         return _handle_evaluate_status(req)
     if path == "/evaluate/cancel" and method == "POST":
         return _handle_evaluate_cancel(req)
+    if path == "/evaluate/cases" and method == "GET":
+        return _handle_evaluate_cases(req)
     if path == "/evaluate/results" and method == "GET":
         return _handle_evaluate_results(req)
     if path == "/config" and method == "GET":
@@ -374,6 +376,31 @@ def _handle_evaluate_cancel(req: https_fn.Request) -> https_fn.Response:
         return _json_response({"cancelled": False, "reason": "not running"})
     _eval_progress["cancel"] = True
     return _json_response({"cancelled": True})
+
+
+def _handle_evaluate_cases(req: https_fn.Request) -> https_fn.Response:
+    """GET /evaluate/cases — テストケース一覧"""
+    eval_dataset = "test-data/golden/eval_dataset.jsonl"
+
+    with open(eval_dataset, encoding="utf-8") as f:
+        lines = [line.strip() for line in f if line.strip()]
+
+    cases = []
+    for line in lines:
+        data = json.loads(line)
+        cases.append(
+            {
+                "id": data["id"],
+                "type": data["type"],
+                "category": data["category"],
+                "query": data["query"],
+                "expected_answer": data["expected_answer"],
+                "expected_keywords": data["expected_keywords"],
+                "requires": data.get("requires", ""),
+            }
+        )
+
+    return _json_response({"cases": cases, "count": len(cases)})
 
 
 def _handle_evaluate_results(req: https_fn.Request) -> https_fn.Response:

@@ -104,6 +104,20 @@ export function cancelEvaluate(): Promise<{ cancelled: boolean }> {
   return request('/evaluate/cancel', { method: 'POST' })
 }
 
+export interface EvalCase {
+  id: string
+  type: string
+  category: string
+  query: string
+  expected_answer: string
+  expected_keywords: string[]
+  requires: string
+}
+
+export function getEvalCases(): Promise<{ cases: EvalCase[]; count: number }> {
+  return request('/evaluate/cases')
+}
+
 export interface EvalResultSummary {
   file: string
   date: string
