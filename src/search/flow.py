@@ -68,6 +68,19 @@ def rag_flow(
         search_results = vector_search(query, user_groups=user_groups)
         print(f"  [VectorSearch] {len(search_results)} results")
 
+    # Step 1.5: 権限除外検出（Shadow Retrieval）
+    if config.permission_filter and user_groups and len(search_results) == 0:
+        shadow_results = vector_search(query, user_groups=None)
+        if len(shadow_results) > 0:
+            print("  [PermissionCheck] FILTERED_BY_PERMISSION — access denied")
+            return RAGResponse(
+                answer="この情報へのアクセス権限がありません。管理者にお問い合わせください。",
+                sources=[],
+                reranked_sources=[],
+                query=query,
+            )
+        print("  [PermissionCheck] NO_MATCH — no documents found")
+
     # Step 2: リランキング
     reranked_results = rerank(query, search_results)
     print(f"  [Rerank] {len(reranked_results)} results after filtering")
@@ -76,6 +89,21 @@ def rag_flow(
     if config.metadata_scoring:
         reranked_results = apply_metadata_scores(query, reranked_results)
         print(f"  [MetadataScore] applied to {len(reranked_results)} results")
+
+    # Step 2.8: Answerability Gate（スコア閾値チェック）
+    if config.answerability_threshold > 0:
+        top_score = reranked_results[0].score if reranked_results else 0.0
+        if top_score < config.answerability_threshold:
+            print(
+                f"  [AnswerabilityGate] REJECTED — top_score={top_score:.4f}"
+                f" < threshold={config.answerability_threshold}"
+            )
+            return RAGResponse(
+                answer="提供された情報には記載がありません。",
+                sources=search_results,
+                reranked_sources=reranked_results,
+                query=query,
+            )
 
     # Step 3: コンテキスト構築
     context = "\n\n---\n\n".join(r.content for r in reranked_results)
@@ -96,12 +124,6 @@ def _generate_answer(query: str, context: str, model_name: str | None = None) ->
     model = _get_model(model_name)
 
     permission_hint = ""
-    if config.permission_filter:
-        permission_hint = (
-            "\nなお、検索結果はユーザーのアクセス権限に基づいてフィルタリングされています。"
-            "該当する情報が見つからない場合、アクセス権限による制限の可能性があります。"
-            "その場合は「この情報へのアクセス権限がありません」と回答してください。"
-        )
 
     prompt = f"""あなたは社内ドキュメントに基づいて質問に回答するアシスタントです。
 
