@@ -53,6 +53,7 @@
   - 各タスクに対象ファイルパスが明記されているか
   - 各タスクの変更内容が具体的か（before/after または操作手順）
   - 各Phaseに🔬機械検証タスクがあるか（コマンド + 期待結果）
+  - DDにテストケースID（semantic-001等）を記載した場合、`scripts/verify_dd_test_ids.py` で eval_dataset.jsonl との整合性を検証すること
 - [ ] 😈 **Devil's Advocate調査**
   - このアプローチの欠点・リスクは何か？
   - 他に有力な選択肢はないか？
