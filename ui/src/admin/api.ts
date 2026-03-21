@@ -57,6 +57,23 @@ export function runIngest(clear = false): Promise<IngestResult> {
   return request('/ingest', { method: 'POST', body: JSON.stringify({ clear }) })
 }
 
+export interface IngestProgress {
+  running: boolean
+  current: number
+  total: number
+  current_file: string
+  elapsed: number
+  estimated_remaining: number
+}
+
+export function getIngestStatus(): Promise<IngestProgress> {
+  return request('/ingest/status')
+}
+
+export function cancelIngest(): Promise<{ cancelled: boolean }> {
+  return request('/ingest/cancel', { method: 'POST' })
+}
+
 // --- Evaluate ---
 
 export interface ScoreByType {

@@ -156,6 +156,10 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         return _handle_sources(req)
     if path == "/ingest" and method == "POST":
         return _handle_ingest(req)
+    if path == "/ingest/status" and method == "GET":
+        return _handle_ingest_status(req)
+    if path == "/ingest/cancel" and method == "POST":
+        return _handle_ingest_cancel(req)
     if path == "/evaluate" and method == "POST":
         return _handle_evaluate(req)
     if path == "/evaluate/status" and method == "GET":
@@ -203,6 +207,30 @@ def _handle_sources(req: https_fn.Request) -> https_fn.Response:
 # --- Ingest ---
 
 
+_ingest_progress: dict = {
+    "running": False,
+    "cancel": False,
+    "current": 0,
+    "total": 0,
+    "current_file": "",
+    "elapsed": 0.0,
+    "estimated_remaining": 0.0,
+}
+
+
+def _handle_ingest_status(req: https_fn.Request) -> https_fn.Response:
+    """GET /ingest/status — インジェスト進捗を返す"""
+    return _json_response(_ingest_progress)
+
+
+def _handle_ingest_cancel(req: https_fn.Request) -> https_fn.Response:
+    """POST /ingest/cancel — インジェストを中止する"""
+    if not _ingest_progress.get("running"):
+        return _json_response({"cancelled": False, "reason": "not running"})
+    _ingest_progress["cancel"] = True
+    return _json_response({"cancelled": True})
+
+
 def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
     """POST /ingest — インジェスト実行"""
     from src.ingest.chunker import chunk_document
@@ -225,12 +253,33 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
                 files.append((rel, full))
     files.sort()
 
+    # 進捗初期化
+    start_time = time.time()
+    _ingest_progress.update(
+        {
+            "running": True,
+            "cancel": False,
+            "current": 0,
+            "total": len(files),
+            "current_file": "",
+            "elapsed": 0.0,
+            "estimated_remaining": 0.0,
+        }
+    )
+
     total_chunks = 0
     total_stored = 0
     total_skipped = 0
     file_results = []
+    cancelled = False
 
-    for file_name, file_path in files:
+    for i, (file_name, file_path) in enumerate(files):
+        if _ingest_progress.get("cancel"):
+            cancelled = True
+            break
+
+        _ingest_progress["current_file"] = file_name
+
         with open(file_path, encoding="utf-8") as f:
             text = f.read()
 
@@ -251,8 +300,22 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
             }
         )
 
+        elapsed = time.time() - start_time
+        done = i + 1
+        avg = elapsed / done
+        _ingest_progress.update(
+            {
+                "current": done,
+                "elapsed": round(elapsed, 1),
+                "estimated_remaining": round(avg * (len(files) - done), 1),
+            }
+        )
+
+    _ingest_progress.update({"running": False, "cancel": False})
+
     return _json_response(
         {
+            "cancelled": cancelled,
             "cleared": deleted,
             "files": len(files),
             "total_chunks": total_chunks,

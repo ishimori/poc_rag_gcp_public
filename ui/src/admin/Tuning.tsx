@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  getConfig, updateConfig, runIngest, runEvaluate, getSources, getEvalStatus, cancelEvaluate,
-  type ConfigParams, type EvalProgress, type EvalReport, type IngestResult, type SourceFile,
+  getConfig, updateConfig, runIngest, runEvaluate, getSources,
+  getEvalStatus, cancelEvaluate, getIngestStatus, cancelIngest,
+  type ConfigParams, type EvalProgress, type EvalReport, type IngestResult, type IngestProgress, type SourceFile,
 } from './api'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
@@ -20,6 +21,8 @@ export default function Tuning() {
   const [ingestStatus, setIngestStatus] = useState<Status>('idle')
   const [ingestResult, setIngestResult] = useState<IngestResult | null>(null)
   const [ingestClear, setIngestClear] = useState(true)
+  const [ingestProgress, setIngestProgress] = useState<IngestProgress | null>(null)
+  const [ingestDetached, setIngestDetached] = useState(false)
 
   const [evalStatus, setEvalStatus] = useState<Status>('idle')
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null)
@@ -34,6 +37,7 @@ export default function Tuning() {
   const [error, setError] = useState('')
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const ingestPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     getConfig().then((c) => {
@@ -43,6 +47,13 @@ export default function Tuning() {
     getSources().then((res) => setSourceFiles(res.files)).catch(() => {})
 
     // マウント時に実行中ジョブを検出
+    getIngestStatus().then((status) => {
+      if (status.running) {
+        setIngestStatus('loading')
+        setIngestProgress(status)
+        setIngestDetached(true)
+      }
+    }).catch(() => {})
     getEvalStatus().then((status) => {
       if (status.running) {
         setEvalStatus('loading')
@@ -51,6 +62,33 @@ export default function Tuning() {
       }
     }).catch(() => {})
   }, [])
+
+  // Ingest進捗ポーリング
+  useEffect(() => {
+    if (ingestStatus === 'loading') {
+      ingestPollRef.current = setInterval(async () => {
+        try {
+          const status = await getIngestStatus()
+          setIngestProgress(status)
+          if (ingestDetached && !status.running) {
+            setIngestStatus('success')
+            setIngestDetached(false)
+          }
+        } catch {
+          // ポーリング失敗は無視
+        }
+      }, 2000)
+    }
+    return () => {
+      if (ingestPollRef.current) {
+        clearInterval(ingestPollRef.current)
+        ingestPollRef.current = null
+      }
+      if (ingestStatus !== 'loading') {
+        setIngestProgress(null)
+      }
+    }
+  }, [ingestStatus, ingestDetached])
 
   // Evaluate進捗ポーリング
   useEffect(() => {
@@ -99,6 +137,7 @@ export default function Tuning() {
   async function handleIngest() {
     setIngestStatus('loading')
     setIngestResult(null)
+    setIngestDetached(false)
     try {
       const res = await runIngest(ingestClear)
       setIngestResult(res)
@@ -106,6 +145,14 @@ export default function Tuning() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error')
       setIngestStatus('error')
+    }
+  }
+
+  async function handleCancelIngest() {
+    try {
+      await cancelIngest()
+    } catch {
+      // キャンセル失敗は無視
     }
   }
 
@@ -167,6 +214,10 @@ export default function Tuning() {
     { key: 'rerank_top_n', label: '絞り込み件数', hint: '検索結果をAIが再評価した後、上位何件を回答に使うか' },
     { key: 'rerank_threshold', label: '足切りスコア', hint: 'AIの再評価でこのスコア未満の候補は除外する（0〜1）', step: '0.01' },
   ]
+
+  const ingestProgressPct = ingestProgress && ingestProgress.total > 0
+    ? Math.round((ingestProgress.current / ingestProgress.total) * 100)
+    : 0
 
   const progressPct = evalProgress && evalProgress.total > 0
     ? Math.round((evalProgress.current / evalProgress.total) * 100)
@@ -281,6 +332,31 @@ export default function Tuning() {
                 ? 'DBを空にしてから全文書を再取り込み（パラメータ変更時はこちら）'
                 : '新規・変更分だけ追加（既存データはそのまま）'}
             </label>
+            {ingestStatus === 'loading' && ingestProgress && ingestProgress.total > 0 && (
+              <div className="admin-eval-progress">
+                <div className="admin-eval-progress-info">
+                  <span>{ingestProgress.current} / {ingestProgress.total} ファイル完了</span>
+                  <button className="admin-btn-sm admin-btn-cancel" onClick={handleCancelIngest}>中止</button>
+                </div>
+                <div className="admin-progress-bar">
+                  <div
+                    className="admin-progress-bar-fill"
+                    style={{ width: `${ingestProgressPct}%` }}
+                  />
+                </div>
+                <div className="admin-eval-progress-detail">
+                  <span>{formatTime(ingestProgress.elapsed)} 経過</span>
+                  {ingestProgress.estimated_remaining > 0 && (
+                    <span>残り約 {formatTime(ingestProgress.estimated_remaining)}</span>
+                  )}
+                </div>
+                {ingestProgress.current_file && (
+                  <div className="admin-eval-progress-current">
+                    処理中: {ingestProgress.current_file}
+                  </div>
+                )}
+              </div>
+            )}
             {sourceFiles.length > 0 && (
               <details className="admin-source-files">
                 <summary>取り込み対象ファイル（{sourceFiles.length}件）</summary>
