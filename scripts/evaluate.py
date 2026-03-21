@@ -1,5 +1,8 @@
 """評価パイプライン: eval_dataset.jsonl → RAG Flow → スコアレポート"""
 
+from __future__ import annotations
+
+import argparse
 import json
 import os
 import sys
@@ -20,6 +23,15 @@ EVAL_DATASET = "test-data/golden/eval_dataset.jsonl"
 
 
 def main():
+    parser = argparse.ArgumentParser(description="RAG評価パイプライン")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="先頭N件だけ実行する（検証用。0=全件）",
+    )
+    args = parser.parse_args()
+
     print("=== RAG Evaluation ===")
     print()
 
@@ -41,7 +53,12 @@ def main():
             )
         )
 
-    print(f"Loaded {len(cases)} evaluation cases.")
+    total_loaded = len(cases)
+    if args.limit > 0:
+        cases = cases[: args.limit]
+        print(f"Loaded {total_loaded} evaluation cases (limit: {args.limit}).")
+    else:
+        print(f"Loaded {total_loaded} evaluation cases.")
     print()
 
     results = run_evaluation(cases)
@@ -50,6 +67,9 @@ def main():
 
     file_path = save_report(report)
     print(f"Report saved to: {file_path}")
+
+    if args.limit > 0:
+        print(f"\n  ⚠ Limited run ({args.limit}/{total_loaded} cases). Results are partial.")
 
 
 if __name__ == "__main__":

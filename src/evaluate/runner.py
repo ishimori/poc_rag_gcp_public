@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
+
 from src.evaluate.scorer import (
     EvalCase,
     EvalResult,
@@ -11,14 +14,20 @@ from src.evaluate.scorer import (
 )
 from src.search.flow import rag_flow
 
+ProgressCallback = Callable[[int, int, EvalResult], None]
+
+
+def _format_time(seconds: float) -> str:
+    """秒数を M:SS 形式に変換する"""
+    m, s = divmod(int(seconds), 60)
+    return f"{m}:{s:02d}"
+
 
 def run_case(eval_case: EvalCase) -> EvalResult:
     """1件の評価ケースを実行する"""
-    print(f"  [{eval_case.id}] {eval_case.query}")
 
     # requires判定: 機能がOFF/未実装ならスキップ
     if eval_case.requires and not is_feature_active(eval_case.requires):
-        print(f"    → SKIP (requires: {eval_case.requires})")
         return EvalResult(
             id=eval_case.id,
             query=eval_case.query,
@@ -73,16 +82,44 @@ def run_case(eval_case: EvalCase) -> EvalResult:
     )
 
 
-def run_evaluation(cases: list[EvalCase]) -> list[EvalResult]:
+def run_evaluation(
+    cases: list[EvalCase],
+    on_progress: ProgressCallback | None = None,
+) -> list[EvalResult]:
     """全評価ケースを実行する"""
     results: list[EvalResult] = []
+    total = len(cases)
+    start_time = time.time()
+    active_count = 0
 
-    for eval_case in cases:
+    for i, eval_case in enumerate(cases, 1):
         result = run_case(eval_case)
-        if not result.skipped:
+        elapsed = time.time() - start_time
+        elapsed_str = _format_time(elapsed)
+
+        if result.skipped:
+            print(f"  [{i}/{total}] SKIP {result.id} ({result.skipped_reason}) [{elapsed_str} elapsed]")
+        else:
+            active_count += 1
             status = "PASS" if result.passed else "FAIL"
             disc = f" ⚠ {result.discrepancy}" if result.discrepancy else ""
-            print(f"    → {status} (llm: {result.llm_label}, keyword: {result.keyword_score * 100:.0f}%){disc}")
+
+            # 残り時間推定: activeケースの平均実行時間 × 残りケース数
+            remaining_str = ""
+            if active_count >= 2:
+                avg_per_active = elapsed / active_count
+                est_remaining = avg_per_active * (total - i)
+                remaining_str = f", ~{_format_time(est_remaining)} remaining"
+
+            print(
+                f"  [{i}/{total}] {status} {result.id}"
+                f" (llm: {result.llm_label}, keyword: {result.keyword_score * 100:.0f}%)"
+                f"{disc} [{elapsed_str} elapsed{remaining_str}]"
+            )
+
+        if on_progress:
+            on_progress(i, total, result)
+
         results.append(result)
 
     skipped = sum(1 for r in results if r.skipped)

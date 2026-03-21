@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
-  getConfig, updateConfig, runIngest, runEvaluate, getSources,
-  type ConfigParams, type EvalReport, type IngestResult, type SourceFile,
+  getConfig, updateConfig, runIngest, runEvaluate, getSources, getEvalStatus,
+  type ConfigParams, type EvalProgress, type EvalReport, type IngestResult, type SourceFile,
 } from './api'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 
 export default function Tuning() {
   const [config, setConfig] = useState<ConfigParams | null>(null)
@@ -17,12 +23,15 @@ export default function Tuning() {
 
   const [evalStatus, setEvalStatus] = useState<Status>('idle')
   const [evalReport, setEvalReport] = useState<EvalReport | null>(null)
+  const [evalProgress, setEvalProgress] = useState<EvalProgress | null>(null)
 
   const [retuneStatus, setRetuneStatus] = useState<Status>('idle')
 
   const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([])
 
   const [error, setError] = useState('')
+
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     getConfig().then((c) => {
@@ -31,6 +40,27 @@ export default function Tuning() {
     }).catch((e) => setError(e.message))
     getSources().then((res) => setSourceFiles(res.files)).catch(() => {})
   }, [])
+
+  // Evaluate進捗ポーリング
+  useEffect(() => {
+    if (evalStatus === 'loading') {
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await getEvalStatus()
+          setEvalProgress(status)
+        } catch {
+          // ポーリング失敗は無視（バックエンドが忙しい場合がある）
+        }
+      }, 2000)
+    }
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+      setEvalProgress(null)
+    }
+  }, [evalStatus])
 
   function handleDraftChange(key: keyof ConfigParams, value: string) {
     setDraft((prev) => ({ ...prev, [key]: key === 'rerank_threshold' ? parseFloat(value) : parseInt(value) }))
@@ -109,6 +139,10 @@ export default function Tuning() {
     { key: 'rerank_top_n', label: '絞り込み件数', hint: '検索結果をAIが再評価した後、上位何件を回答に使うか' },
     { key: 'rerank_threshold', label: '足切りスコア', hint: 'AIの再評価でこのスコア未満の候補は除外する（0〜1）', step: '0.01' },
   ]
+
+  const progressPct = evalProgress && evalProgress.total > 0
+    ? Math.round((evalProgress.current / evalProgress.total) * 100)
+    : 0
 
   return (
     <div className="admin-page">
@@ -241,6 +275,34 @@ export default function Tuning() {
               </button>
             </div>
             <p className="admin-action-desc">テストケースで質問→回答し、正答率を測定する</p>
+            {evalStatus === 'loading' && evalProgress && evalProgress.total > 0 && (
+              <div className="admin-eval-progress">
+                <div className="admin-eval-progress-info">
+                  {evalProgress.current} / {evalProgress.total} 件完了
+                </div>
+                <div className="admin-progress-bar">
+                  <div
+                    className="admin-progress-bar-fill"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <div className="admin-eval-progress-detail">
+                  <span>{formatTime(evalProgress.elapsed)} 経過</span>
+                  {evalProgress.estimated_remaining > 0 && (
+                    <span>残り約 {formatTime(evalProgress.estimated_remaining)}</span>
+                  )}
+                </div>
+                {evalProgress.current_id && (
+                  <div className="admin-eval-progress-current">
+                    最新: {evalProgress.current_id}
+                    {evalProgress.results.length > 0 && (() => {
+                      const last = evalProgress.results[evalProgress.results.length - 1]
+                      return ` → ${last.status}${last.llm_label ? ` (${last.llm_label})` : ''}`
+                    })()}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="admin-action-card">

@@ -157,6 +157,8 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         return _handle_ingest(req)
     if path == "/evaluate" and method == "POST":
         return _handle_evaluate(req)
+    if path == "/evaluate/status" and method == "GET":
+        return _handle_evaluate_status(req)
     if path == "/evaluate/results" and method == "GET":
         return _handle_evaluate_results(req)
     if path == "/config" and method == "GET":
@@ -258,6 +260,16 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
 
 # --- Evaluate ---
 
+_eval_progress: dict = {
+    "running": False,
+    "current": 0,
+    "total": 0,
+    "current_id": "",
+    "elapsed": 0.0,
+    "estimated_remaining": 0.0,
+    "results": [],
+}
+
 
 def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
     """POST /evaluate — 評価実行"""
@@ -285,7 +297,53 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
             )
         )
 
-    results = run_evaluation(cases)
+    # 進捗初期化
+    start_time = time.time()
+    active_count = 0
+    _eval_progress.update(
+        {
+            "running": True,
+            "current": 0,
+            "total": len(cases),
+            "current_id": "",
+            "elapsed": 0.0,
+            "estimated_remaining": 0.0,
+            "results": [],
+        }
+    )
+
+    def _on_progress(current: int, total: int, result) -> None:
+        nonlocal active_count
+        elapsed = time.time() - start_time
+        if not result.skipped:
+            active_count += 1
+
+        est_remaining = 0.0
+        if active_count >= 2:
+            avg_per_active = elapsed / active_count
+            est_remaining = avg_per_active * (total - current)
+
+        status = "SKIP" if result.skipped else ("PASS" if result.passed else "FAIL")
+        _eval_progress["results"].append(
+            {
+                "id": result.id,
+                "status": status,
+                "llm_label": result.llm_label or "",
+            }
+        )
+        _eval_progress.update(
+            {
+                "current": current,
+                "total": total,
+                "current_id": result.id,
+                "elapsed": round(elapsed, 1),
+                "estimated_remaining": round(est_remaining, 1),
+            }
+        )
+
+    results = run_evaluation(cases, on_progress=_on_progress)
+    _eval_progress["running"] = False
+
     report = generate_report(results)
     file_path = save_report(report)
 
@@ -295,6 +353,11 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
             "saved_to": file_path,
         }
     )
+
+
+def _handle_evaluate_status(req: https_fn.Request) -> https_fn.Response:
+    """GET /evaluate/status — 評価進捗を返す"""
+    return _json_response(_eval_progress)
 
 
 def _handle_evaluate_results(req: https_fn.Request) -> https_fn.Response:

@@ -86,6 +86,20 @@ export function runEvaluate(): Promise<{ report: EvalReport; saved_to: string }>
   return request('/evaluate', { method: 'POST' })
 }
 
+export interface EvalProgress {
+  running: boolean
+  current: number
+  total: number
+  current_id: string
+  elapsed: number
+  estimated_remaining: number
+  results: { id: string; status: string; llm_label: string }[]
+}
+
+export function getEvalStatus(): Promise<EvalProgress> {
+  return request('/evaluate/status')
+}
+
 export interface EvalResultSummary {
   file: string
   date: string
