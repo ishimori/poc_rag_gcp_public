@@ -100,11 +100,11 @@ export default function Tuning() {
   if (!config) return <div className="admin-page"><p>Loading...</p></div>
 
   const PARAM_FIELDS: { key: keyof ConfigParams; label: string; hint: string; step?: string }[] = [
-    { key: 'chunk_size', label: 'Chunk Size', hint: '文書の分割サイズ（文字数）' },
-    { key: 'chunk_overlap', label: 'Chunk Overlap', hint: '分割時の重複文字数' },
-    { key: 'top_k', label: 'Top K', hint: '検索で取得する候補数' },
-    { key: 'rerank_top_n', label: 'Rerank Top N', hint: 'リランク後に残す件数' },
-    { key: 'rerank_threshold', label: 'Rerank Threshold', hint: 'リランクのスコア下限', step: '0.01' },
+    { key: 'chunk_size', label: '分割サイズ', hint: '文書を何文字ごとに区切るか。大きいと文脈が豊富、小さいと検索精度が上がる' },
+    { key: 'chunk_overlap', label: '重複幅', hint: '分割の境界で前後の文を重ねる文字数。情報の切れ目を防ぐ' },
+    { key: 'top_k', label: '検索件数', hint: '質問に対して何件の候補を検索するか' },
+    { key: 'rerank_top_n', label: '絞り込み件数', hint: '検索結果をAIが再評価した後、上位何件を回答に使うか' },
+    { key: 'rerank_threshold', label: '足切りスコア', hint: 'AIの再評価でこのスコア未満の候補は除外する（0〜1）', step: '0.01' },
   ]
 
   return (
