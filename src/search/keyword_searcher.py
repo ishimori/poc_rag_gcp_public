@@ -62,19 +62,39 @@ def _extract_identifiers(query: str) -> list[str]:
     return numbers + codes
 
 
-def _score_chunk(identifiers: list[str], content: str) -> float:
-    """識別子のマッチ度合いでチャンクをスコアリングする"""
+# 一般語マッチで除外するストップワード
+_STOP_WORDS = frozenset(
+    "の は が を に で と も か な い う た て へ から まで より ない です ます って たい"
+    " する した して ある いる どう 方法 場合 教え 知り やり 方 ため とき 時".split()
+)
+
+
+def _extract_keywords(query: str) -> list[str]:
+    """クエリから一般語キーワードを抽出する（2文字以上、ストップワード除外）"""
+    # ひらがな連続・句読点・記号で分割して、2文字以上のトークンを抽出
+    tokens = re.findall(r"[\u4e00-\u9fff\u30a0-\u30ffA-Za-z]+", query)
+    return [t for t in tokens if len(t) >= 2 and t not in _STOP_WORDS]
+
+
+def _score_chunk(identifiers: list[str], keywords: list[str], content: str) -> float:
+    """識別子マッチ + 一般語マッチでチャンクをスコアリングする"""
     score = 0.0
+    # 識別子マッチ（高配点）
     for identifier in identifiers:
         if identifier in content:
             score += 2.0
+    # 一般語マッチ（低配点 — RRFブースト用）
+    for kw in keywords:
+        if kw in content:
+            score += 1.0
     return score
 
 
 def keyword_search(query: str, top_k: int | None = None) -> list[SearchResult]:
-    """識別子ベースのキーワード検索"""
+    """識別子 + 一般語キーワード検索"""
     identifiers = _extract_identifiers(query)
-    if not identifiers:
+    keywords = _extract_keywords(query)
+    if not identifiers and not keywords:
         return []
 
     k = top_k or config.top_k
@@ -82,7 +102,7 @@ def keyword_search(query: str, top_k: int | None = None) -> list[SearchResult]:
 
     scored: list[tuple[float, int, SearchResult]] = []
     for i, chunk in enumerate(all_chunks):
-        s = _score_chunk(identifiers, chunk.content)
+        s = _score_chunk(identifiers, keywords, chunk.content)
         if s > 0:
             scored.append((s, i, replace(chunk, score=s)))
 
@@ -90,5 +110,5 @@ def keyword_search(query: str, top_k: int | None = None) -> list[SearchResult]:
     scored.sort(key=lambda x: -x[0])
 
     results = [item[2] for item in scored[:k]]
-    print(f"  [KeywordSearch] {len(identifiers)} identifiers {identifiers}, {len(results)} hits")
+    print(f"  [KeywordSearch] identifiers={identifiers}, keywords={keywords}, {len(results)} hits")
     return results
