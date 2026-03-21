@@ -207,27 +207,21 @@ def _handle_sources(req: https_fn.Request) -> https_fn.Response:
 # --- Ingest ---
 
 
-_ingest_progress: dict = {
-    "running": False,
-    "cancel": False,
-    "current": 0,
-    "total": 0,
-    "current_file": "",
-    "elapsed": 0.0,
-    "estimated_remaining": 0.0,
-}
-
-
 def _handle_ingest_status(req: https_fn.Request) -> https_fn.Response:
     """GET /ingest/status — インジェスト進捗を返す"""
-    return _json_response(_ingest_progress)
+    from src.task_status import get_task_status
+
+    return _json_response(get_task_status("ingest"))
 
 
 def _handle_ingest_cancel(req: https_fn.Request) -> https_fn.Response:
     """POST /ingest/cancel — インジェストを中止する"""
-    if not _ingest_progress.get("running"):
+    from src.task_status import get_task_status, update_task_status
+
+    status = get_task_status("ingest")
+    if not status.get("running"):
         return _json_response({"cancelled": False, "reason": "not running"})
-    _ingest_progress["cancel"] = True
+    update_task_status("ingest", cancel=True)
     return _json_response({"cancelled": True})
 
 
@@ -236,6 +230,11 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
     from src.ingest.chunker import chunk_document
     from src.ingest.embedder import embed_texts
     from src.ingest.store import clear_collection, store_chunks
+    from src.task_status import (
+        check_cancel,
+        clear_task_status,
+        update_task_status,
+    )
 
     body = req.get_json(force=True, silent=True) or {}
     should_clear = body.get("clear", False)
@@ -255,16 +254,15 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
 
     # 進捗初期化
     start_time = time.time()
-    _ingest_progress.update(
-        {
-            "running": True,
-            "cancel": False,
-            "current": 0,
-            "total": len(files),
-            "current_file": "",
-            "elapsed": 0.0,
-            "estimated_remaining": 0.0,
-        }
+    update_task_status(
+        "ingest",
+        running=True,
+        cancel=False,
+        current=0,
+        total=len(files),
+        current_file="",
+        elapsed=0.0,
+        estimated_remaining=0.0,
     )
 
     total_chunks = 0
@@ -273,45 +271,45 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
     file_results = []
     cancelled = False
 
-    for i, (file_name, file_path) in enumerate(files):
-        if _ingest_progress.get("cancel"):
-            cancelled = True
-            break
+    try:
+        for i, (file_name, file_path) in enumerate(files):
+            if check_cancel("ingest"):
+                cancelled = True
+                break
 
-        _ingest_progress["current_file"] = file_name
+            update_task_status("ingest", current_file=file_name)
 
-        with open(file_path, encoding="utf-8") as f:
-            text = f.read()
+            with open(file_path, encoding="utf-8") as f:
+                text = f.read()
 
-        chunks = chunk_document(text, file_name)
-        texts = [c.content for c in chunks]
-        embeddings = embed_texts(texts)
-        result = store_chunks(chunks, embeddings)
+            chunks = chunk_document(text, file_name)
+            texts = [c.content for c in chunks]
+            embeddings = embed_texts(texts)
+            result = store_chunks(chunks, embeddings)
 
-        total_chunks += len(chunks)
-        total_stored += result["stored"]
-        total_skipped += result["skipped"]
-        file_results.append(
-            {
-                "file": file_name,
-                "chunks": len(chunks),
-                "stored": result["stored"],
-                "skipped": result["skipped"],
-            }
-        )
+            total_chunks += len(chunks)
+            total_stored += result["stored"]
+            total_skipped += result["skipped"]
+            file_results.append(
+                {
+                    "file": file_name,
+                    "chunks": len(chunks),
+                    "stored": result["stored"],
+                    "skipped": result["skipped"],
+                }
+            )
 
-        elapsed = time.time() - start_time
-        done = i + 1
-        avg = elapsed / done
-        _ingest_progress.update(
-            {
-                "current": done,
-                "elapsed": round(elapsed, 1),
-                "estimated_remaining": round(avg * (len(files) - done), 1),
-            }
-        )
-
-    _ingest_progress.update({"running": False, "cancel": False})
+            elapsed = time.time() - start_time
+            done = i + 1
+            avg = elapsed / done
+            update_task_status(
+                "ingest",
+                current=done,
+                elapsed=round(elapsed, 1),
+                estimated_remaining=round(avg * (len(files) - done), 1),
+            )
+    finally:
+        clear_task_status("ingest")
 
     return _json_response(
         {
@@ -328,23 +326,17 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
 
 # --- Evaluate ---
 
-_eval_progress: dict = {
-    "running": False,
-    "cancel": False,
-    "current": 0,
-    "total": 0,
-    "current_id": "",
-    "elapsed": 0.0,
-    "estimated_remaining": 0.0,
-    "results": [],
-}
-
 
 def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
     """POST /evaluate — 評価実行"""
     from src.evaluate.reporter import generate_report, save_report
     from src.evaluate.runner import run_evaluation
     from src.evaluate.scorer import EvalCase
+    from src.task_status import (
+        check_cancel,
+        clear_task_status,
+        update_task_status,
+    )
 
     eval_dataset = "test-data/golden/eval_dataset.jsonl"
 
@@ -369,21 +361,21 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
     # 進捗初期化
     start_time = time.time()
     active_count = 0
-    _eval_progress.update(
-        {
-            "running": True,
-            "cancel": False,
-            "current": 0,
-            "total": len(cases),
-            "current_id": "",
-            "elapsed": 0.0,
-            "estimated_remaining": 0.0,
-            "results": [],
-        }
+    eval_results_list: list[dict] = []
+    update_task_status(
+        "evaluate",
+        running=True,
+        cancel=False,
+        current=0,
+        total=len(cases),
+        current_id="",
+        elapsed=0.0,
+        estimated_remaining=0.0,
+        results=[],
     )
 
     def _should_cancel() -> bool:
-        return _eval_progress.get("cancel", False)
+        return check_cancel("evaluate")
 
     def _on_progress(current: int, total: int, result) -> None:
         nonlocal active_count
@@ -397,26 +389,27 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
             est_remaining = avg_per_active * (total - current)
 
         status = "SKIP" if result.skipped else ("PASS" if result.passed else "FAIL")
-        _eval_progress["results"].append(
+        eval_results_list.append(
             {
                 "id": result.id,
                 "status": status,
                 "llm_label": result.llm_label or "",
             }
         )
-        _eval_progress.update(
-            {
-                "current": current,
-                "total": total,
-                "current_id": result.id,
-                "elapsed": round(elapsed, 1),
-                "estimated_remaining": round(est_remaining, 1),
-            }
+        update_task_status(
+            "evaluate",
+            current=current,
+            total=total,
+            current_id=result.id,
+            elapsed=round(elapsed, 1),
+            estimated_remaining=round(est_remaining, 1),
+            results=eval_results_list,
         )
 
-    results = run_evaluation(cases, on_progress=_on_progress, should_cancel=_should_cancel)
-    _eval_progress["running"] = False
-    _eval_progress["cancel"] = False
+    try:
+        results = run_evaluation(cases, on_progress=_on_progress, should_cancel=_should_cancel)
+    finally:
+        clear_task_status("evaluate")
 
     report = generate_report(results)
     file_path = save_report(report)
@@ -431,14 +424,19 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
 
 def _handle_evaluate_status(req: https_fn.Request) -> https_fn.Response:
     """GET /evaluate/status — 評価進捗を返す"""
-    return _json_response(_eval_progress)
+    from src.task_status import get_task_status
+
+    return _json_response(get_task_status("evaluate"))
 
 
 def _handle_evaluate_cancel(req: https_fn.Request) -> https_fn.Response:
     """POST /evaluate/cancel — 評価を中止する"""
-    if not _eval_progress.get("running"):
+    from src.task_status import get_task_status, update_task_status
+
+    status = get_task_status("evaluate")
+    if not status.get("running"):
         return _json_response({"cancelled": False, "reason": "not running"})
-    _eval_progress["cancel"] = True
+    update_task_status("evaluate", cancel=True)
     return _json_response({"cancelled": True})
 
 

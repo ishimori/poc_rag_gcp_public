@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 # Windows cp932 問題を回避
@@ -18,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.evaluate.reporter import generate_report, print_report, save_report
 from src.evaluate.runner import run_evaluation
 from src.evaluate.scorer import EvalCase
+from src.task_status import check_cancel, clear_task_status, update_task_status
 
 EVAL_DATASET = "test-data/golden/eval_dataset.jsonl"
 
@@ -61,7 +63,49 @@ def main():
         print(f"Loaded {total_loaded} evaluation cases.")
     print()
 
-    results = run_evaluation(cases)
+    start_time = time.time()
+    active_count = 0
+
+    update_task_status(
+        "evaluate",
+        running=True,
+        cancel=False,
+        current=0,
+        total=len(cases),
+        current_id="",
+        elapsed=0.0,
+        estimated_remaining=0.0,
+        results=[],
+    )
+
+    def _on_progress(current: int, total: int, result) -> None:
+        nonlocal active_count
+        elapsed = time.time() - start_time
+        if not result.skipped:
+            active_count += 1
+
+        est_remaining = 0.0
+        if active_count >= 2:
+            avg_per_active = elapsed / active_count
+            est_remaining = avg_per_active * (total - current)
+
+        update_task_status(
+            "evaluate",
+            current=current,
+            total=total,
+            current_id=result.id,
+            elapsed=round(elapsed, 1),
+            estimated_remaining=round(est_remaining, 1),
+        )
+
+    def _should_cancel() -> bool:
+        return check_cancel("evaluate")
+
+    try:
+        results = run_evaluation(cases, on_progress=_on_progress, should_cancel=_should_cancel)
+    finally:
+        clear_task_status("evaluate")
+
     report = generate_report(results)
     print_report(report)
 

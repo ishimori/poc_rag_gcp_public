@@ -76,16 +76,57 @@ CLI (scripts/ingest.py)  ──書き込み──→  Firestore (task_status)
 
 ## 決定事項
 
-（Phase 0で検討）
+- **Firestore `task_status` コレクション**で状態共有（固定ドキュメントID方式）
+- **新規モジュール `src/task_status.py`** に読み書きユーティリティを集約
+- **フロントエンド変更なし**（DD-019-3-2のUI・ポーリングをそのまま再利用）
+- **main.pyのインメモリ管理（`_ingest_progress` / `_eval_progress`）をFirestore経由に置換**
+- 設計資料: [DD-019-3-3/](DD-019-3-3/) 参照
 
 ## タスク一覧
 
-### Phase 0: 事前精査
-- [ ] 📋 **各Phaseのタスク精査・詳細化**
+### Phase 0: 事前精査 ✅
+- [x] 📋 **各Phaseのタスク精査・詳細化**
 - [ ] 😈 **Devil's Advocate調査**
 
-### Phase 1: 実装
-（Phase 0の決定後に詳細化）
+### Phase 1: タスク状態ユーティリティ ✅
+- [x] `src/task_status.py`（新規作成）: Firestoreへのタスク状態読み書きユーティリティ
+  - `update_task_status(task_id, **fields)` — ドキュメントを `set(..., merge=True)` で更新
+  - `get_task_status(task_id) -> dict` — ドキュメントを読み取り、未存在なら `{"running": False}` を返す
+  - `clear_task_status(task_id)` — `running=False, cancel=False` に更新
+  - `check_cancel(task_id) -> bool` — `cancel` フィールドを読み取り
+  - Firestoreクライアントは `src/ingest/store.py` と同じシングルトンパターン（`config.project_id`）
+- [x] 🔬 **機械検証**: 構文チェック → OK
+
+### Phase 2: CLI統合（Ingest） ✅
+- [x] `scripts/ingest.py`: ファイルループの前後と各反復でタスク状態を更新
+  - 開始時: `update_task_status("ingest", running=True, total=len(files), current=0, ...)`
+  - 各ファイル処理後: `update_task_status("ingest", current=i, current_file=name, elapsed=..., estimated_remaining=...)`
+  - 完了/エラー時: `clear_task_status("ingest")`（try/finally）
+  - 中止: `check_cancel("ingest")` でループ脱出
+- [ ] 🔬 **機械検証**: `python scripts/ingest.py --clear` 実行中にFirestoreの `task_status/ingest` が更新されることを確認
+- [ ] 😈 **DA批判レビュー**
+
+### Phase 3: CLI統合（Evaluate） ✅
+- [x] `scripts/evaluate.py`: `run_evaluation()` に `on_progress` / `should_cancel` コールバックを渡してタスク状態を更新
+  - 開始時: `update_task_status("evaluate", running=True, total=len(cases), current=0, ...)`
+  - `on_progress` コールバック内: `update_task_status("evaluate", current=i, current_id=result.id, ...)`
+  - `should_cancel` コールバック: `check_cancel("evaluate")` を返す
+  - 完了/エラー時: `clear_task_status("evaluate")`（try/finally）
+- [ ] 🔬 **機械検証**: `python scripts/evaluate.py --limit 3` 実行中にFirestoreの `task_status/evaluate` が更新されることを確認
+- [ ] 😈 **DA批判レビュー**
+
+### Phase 4: バックエンド統合 ✅
+- [x] `main.py` `_handle_ingest_status()`: `get_task_status("ingest")` に変更
+- [x] `main.py` `_handle_ingest_cancel()`: `update_task_status("ingest", cancel=True)` に変更
+- [x] `main.py` `_handle_ingest()`: `update_task_status()` / `clear_task_status()` + try/finally に変更
+- [x] `main.py` `_handle_evaluate_status()`: `get_task_status("evaluate")` に変更
+- [x] `main.py` `_handle_evaluate_cancel()`: `update_task_status("evaluate", cancel=True)` に変更
+- [x] `main.py` `_handle_evaluate()`: `update_task_status()` / `clear_task_status()` + try/finally に変更
+- [x] `main.py`: `_ingest_progress` / `_eval_progress` グローバル変数を削除
+- [x] 🔬 **機械検証（構文）**: `py_compile` 全ファイルOK + `npx tsc --noEmit` OK
+- [ ] 🔬 **機械検証（実行）**: Tuning画面のIngestボタン実行 → プログレスバー表示確認（Playwright）
+- [ ] 🔬 **機械検証（クロスプロセス）**: CLI Ingest実行中にTuning画面を開く → detachedモードで進捗表示されることを確認
+- [ ] 😈 **DA批判レビュー**
 
 ## ログ
 
@@ -94,6 +135,14 @@ CLI (scripts/ingest.py)  ──書き込み──→  Firestore (task_status)
 - 背景: DD-019-3-2のインメモリ管理では別プロセス（CLI）の実行状態を検出できない
 - 方針: Firestoreにタスク状態を記録し、CLI/バックエンド両方から読み書きする
 - フロントエンドは変更不要（DD-019-3-2のUI・ポーリングをそのまま再利用）
+- 設計資料作成: [DD-019-3-3/](DD-019-3-3/)（アーキテクチャ図、ER図、状態遷移図）
+- Phase 0完了: タスク精査・詳細化（Phase 1〜4に分解）
+- Phase 1〜4 コード実装完了:
+  - `src/task_status.py` 新規作成（Firestore読み書きユーティリティ）
+  - `scripts/ingest.py` タスク状態更新 + 中止チェック + try/finally
+  - `scripts/evaluate.py` on_progress/should_cancel コールバック + try/finally
+  - `main.py` インメモリ管理（`_ingest_progress` / `_eval_progress`）を全てFirestore経由に置換
+  - 構文チェック + TypeScript型チェック 全パス
 
 ---
 
