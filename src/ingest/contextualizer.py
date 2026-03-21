@@ -41,7 +41,7 @@ def _get_model() -> GenerativeModel:
     if _model is None:
         _model = GenerativeModel(
             config.llm_model,
-            generation_config={"temperature": 0.0, "max_output_tokens": 256},
+            generation_config={"temperature": 0.0, "max_output_tokens": 2048},
         )
     return _model
 
