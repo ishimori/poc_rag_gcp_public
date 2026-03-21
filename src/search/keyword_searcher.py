@@ -69,11 +69,35 @@ _STOP_WORDS = frozenset(
 )
 
 
+def _split_kanji_compound(token: str) -> list[str]:
+    """4文字以上の漢字のみトークンを2文字ずつに分割する。
+
+    例: '繰越上限' → ['繰越', '上限']
+        '情報' → [] (4文字未満)
+        'セキュリティ' → [] (漢字のみではない)
+    """
+    if len(token) < 4:
+        return []
+    # 漢字のみで構成されているか判定
+    if not all("\u4e00" <= c <= "\u9fff" for c in token):
+        return []
+    return [token[i : i + 2] for i in range(0, len(token) - 1, 2)]
+
+
 def _extract_keywords(query: str) -> list[str]:
     """クエリから一般語キーワードを抽出する（2文字以上、ストップワード除外）"""
     # ひらがな連続・句読点・記号で分割して、2文字以上のトークンを抽出
     tokens = re.findall(r"[\u4e00-\u9fff\u30a0-\u30ffA-Za-z]+", query)
-    return [t for t in tokens if len(t) >= 2 and t not in _STOP_WORDS]
+    result: list[str] = []
+    for t in tokens:
+        if len(t) < 2 or t in _STOP_WORDS:
+            continue
+        result.append(t)
+        # 漢語複合語を2文字ずつに分割して追加（元トークンも保持）
+        for sub in _split_kanji_compound(t):
+            if sub not in result and sub not in _STOP_WORDS:
+                result.append(sub)
+    return result
 
 
 def _score_chunk(identifiers: list[str], keywords: list[str], content: str) -> float:
