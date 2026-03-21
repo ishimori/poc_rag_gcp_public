@@ -1,0 +1,28 @@
+{
+  "experiments": [
+    {
+      "label": "A_chunk600",
+      "chunk_size": 600,
+      "chunk_overlap": 100,
+      "passed": 61,
+      "total": 74,
+      "rate": 0.8243243243243243,
+      "chunks": 593
+    },
+    {
+      "label": "B_chunk1200",
+      "chunk_size": 1200,
+      "chunk_overlap": 200,
+      "passed": 63,
+      "total": 74,
+      "rate": 0.8513513513513513,
+      "chunks": 292
+    }
+  ],
+  "total_elapsed": 3748.2,
+  "baseline": {
+    "chunk_size": 800,
+    "chunk_overlap": 150,
+    "rate": 0.797
+  }
+}

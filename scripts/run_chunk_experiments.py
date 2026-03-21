@@ -221,7 +221,7 @@ def main() -> None:
             {
                 "experiments": all_summaries,
                 "total_elapsed": round(total_elapsed, 1),
-                "baseline": {"chunk_size": 800, "chunk_overlap": 150, "rate": 0.50},
+                "baseline": {"chunk_size": 800, "chunk_overlap": 150, "rate": 0.797},
             },
             f,
             ensure_ascii=False,
