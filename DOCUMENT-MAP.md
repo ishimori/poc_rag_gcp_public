@@ -67,6 +67,12 @@
 | [metadata-design.md](doc/research/cross-cutting/metadata-design.md) | メタデータ設計 |
 | [prompt-design.md](doc/research/cross-cutting/prompt-design.md) | プロンプト設計 |
 
+## ガイド (doc/guide/)
+
+| ファイル | 説明 |
+|---------|------|
+| [local-operations.md](doc/guide/local-operations.md) | ローカル操作ガイド（evaluate/ingest/dev server の実行方法・ハマりポイント） |
+
 ## プレゼン資料 (doc/presentation/)
 
 | フォルダ | 説明 |

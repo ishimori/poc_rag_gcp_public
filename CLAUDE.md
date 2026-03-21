@@ -1,6 +1,7 @@
 # DD-Know-How プロジェクト設定
 
 - プロジェクト概要・セットアップ → [README.md](README.md)
+- ローカル操作ガイド → [doc/guide/local-operations.md](doc/guide/local-operations.md)
 - 全ドキュメント一覧 → [DOCUMENT-MAP.md](DOCUMENT-MAP.md)
 
 ## DD設定
