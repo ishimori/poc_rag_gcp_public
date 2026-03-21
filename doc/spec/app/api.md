@@ -223,7 +223,7 @@ cors_methods=["GET", "POST", "PUT"]
 
 ## 4. GET /api/admin/evaluate/results — 評価結果一覧
 
-`results/` ディレクトリの評価レポートJSON を新しい順に返す。
+Firestore `eval_results` コレクションから評価レポートを新しい順に返す。Firestore読み取り失敗時は `results/` ディレクトリのローカルファイルにフォールバック。
 
 ### リクエスト
 
@@ -259,6 +259,7 @@ cors_methods=["GET", "POST", "PUT"]
 {
   "chunk_size": 800,
   "chunk_overlap": 150,
+  "header_injection": true,
   "top_k": 10,
   "rerank_top_n": 5,
   "rerank_threshold": 0.01
@@ -271,6 +272,7 @@ cors_methods=["GET", "POST", "PUT"]
 |-----------|---|-----------|------|
 | `chunk_size` | int | 800 | チャンク分割の最大文字数 |
 | `chunk_overlap` | int | 150 | チャンク間のオーバーラップ文字数 |
+| `header_injection` | bool | true | チャンク先頭にドキュメントタイトルを付与するか |
 | `top_k` | int | 10 | ベクトル検索の取得件数 |
 | `rerank_top_n` | int | 5 | リランキング後の最終件数 |
 | `rerank_threshold` | float | 0.01 | リランキングスコアの最低閾値 |
