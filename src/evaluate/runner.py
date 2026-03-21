@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from src.evaluate.scorer import EvalCase, EvalResult, is_refusal, score_by_keywords
 from src.search.flow import rag_flow
-from src.evaluate.scorer import EvalCase, EvalResult, score_by_keywords, is_refusal
 
 
 def run_case(eval_case: EvalCase) -> EvalResult:

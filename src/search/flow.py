@@ -6,8 +6,8 @@ import vertexai
 from vertexai.generative_models import GenerativeModel
 
 from src.config import config
-from src.search.retriever import SearchResult, vector_search
 from src.search.reranker import rerank
+from src.search.retriever import SearchResult, vector_search
 
 _models: dict[str, GenerativeModel] = {}
 _vertexai_initialized = False
@@ -80,7 +80,7 @@ def _generate_answer(query: str, context: str, model_name: str | None = None) ->
         response = model.generate_content(prompt)
         if response.candidates and response.candidates[0].content.parts:
             return response.candidates[0].content.parts[0].text
-        print(f"  LLM returned empty response")
+        print("  LLM returned empty response")
         return "回答を生成できませんでした。"
     except Exception as e:
         print(f"  LLM error: {e}")

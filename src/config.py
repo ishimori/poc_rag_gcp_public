@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,6 +16,7 @@ class Config:
     # Chunking
     chunk_size: int = 800
     chunk_overlap: int = 150
+    header_injection: bool = True
 
     # Embedding
     embedding_model: str = "text-embedding-005"

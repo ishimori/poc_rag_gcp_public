@@ -30,9 +30,7 @@ def _extract_frontmatter(text: str) -> tuple[str, dict[str, str | list[str]]]:
         if kv:
             value = kv.group(2).strip()
             if value.startswith("[") and value.endswith("]"):
-                meta[kv.group(1)] = [
-                    s.strip().strip('"') for s in value[1:-1].split(",")
-                ]
+                meta[kv.group(1)] = [s.strip().strip('"') for s in value[1:-1].split(",")]
             else:
                 meta[kv.group(1)] = value.strip('"')
     return match.group(2), meta
@@ -56,8 +54,11 @@ def chunk_document(text: str, file_name: str) -> list[Chunk]:
 
     chunks = []
     for i, doc in enumerate(docs):
-        # ヘッダーインジェクション
-        content = f"[{title}]\n{doc.page_content}"
+        # ヘッダーインジェクション（config で無効化可能）
+        if config.header_injection:
+            content = f"[{title}]\n{doc.page_content}"
+        else:
+            content = doc.page_content
         chunks.append(
             Chunk(
                 content=content,

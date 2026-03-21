@@ -115,6 +115,49 @@ export default function Tuning() {
         <strong>操作フロー:</strong> ① パラメータ変更 → ② Re-tune実行（Save → Ingest → Evaluate を一括実行）→ ③ Historyで前回と比較
       </div>
 
+      {/* Technique Toggles */}
+      <div className="admin-section">
+        <h2>Technique Toggles</h2>
+        <p className="admin-section-desc">
+          技術をOFFにして Re-tune すると、その技術の効果（スコア差分）を測定できます。
+          <strong>チャンキング・ヘッダーの変更は再インジェストが必要です。</strong>
+        </p>
+        <div className="admin-toggle-grid">
+          <label className="admin-toggle">
+            <input
+              type="checkbox"
+              checked={draft.header_injection ?? true}
+              onChange={(e) => setDraft((prev) => ({ ...prev, header_injection: e.target.checked }))}
+              disabled={isRunning}
+            />
+            <div>
+              <span className="admin-toggle-label">02 ヘッダーインジェクション</span>
+              <span className="admin-param-hint">各チャンクの先頭に文書タイトルを付与</span>
+              {!(draft.header_injection ?? true) && <span className="admin-toggle-warn">⚠ 再インジェスト必要</span>}
+            </div>
+          </label>
+          <label className="admin-toggle">
+            <input
+              type="checkbox"
+              checked={(draft.rerank_top_n ?? 5) < (draft.top_k ?? 10)}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setDraft((prev) => ({ ...prev, rerank_top_n: 5 }))
+                } else {
+                  setDraft((prev) => ({ ...prev, rerank_top_n: prev.top_k ?? 10 }))
+                }
+              }}
+              disabled={isRunning}
+            />
+            <div>
+              <span className="admin-toggle-label">04 リランキング</span>
+              <span className="admin-param-hint">検索結果をAIが再評価して上位に絞る</span>
+              {(draft.rerank_top_n ?? 5) >= (draft.top_k ?? 10) && <span className="admin-toggle-warn">OFF（top_n=top_k で無効化）</span>}
+            </div>
+          </label>
+        </div>
+      </div>
+
       {/* Parameters */}
       <div className="admin-section">
         <h2>Parameters</h2>
@@ -125,7 +168,7 @@ export default function Tuning() {
               <input
                 type="number"
                 step={step || '1'}
-                value={draft[key] ?? ''}
+                value={draft[key] as number ?? ''}
                 onChange={(e) => handleDraftChange(key, e.target.value)}
                 disabled={isRunning}
               />

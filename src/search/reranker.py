@@ -21,6 +21,7 @@ def rerank(
     project_id = config.project_id
     if not project_id:
         import google.auth
+
         _, project_id = google.auth.default()
 
     ranking_config = client.ranking_config_path(
@@ -29,10 +30,7 @@ def rerank(
         ranking_config="default_ranking_config",
     )
 
-    records = [
-        discoveryengine.RankingRecord(id=str(i), content=r.content)
-        for i, r in enumerate(results)
-    ]
+    records = [discoveryengine.RankingRecord(id=str(i), content=r.content) for i, r in enumerate(results)]
 
     request = discoveryengine.RankRequest(
         ranking_config=ranking_config,

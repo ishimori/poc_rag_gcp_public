@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 
 from src.config import config
@@ -100,10 +100,28 @@ def print_report(report: Report) -> None:
 
 
 def save_report(report: Report) -> str:
-    """レポートをJSONファイルに保存する"""
-    os.makedirs(config.results_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    file_path = os.path.join(config.results_dir, f"eval_{timestamp}.json")
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(asdict(report), f, ensure_ascii=False, indent=2)
-    return file_path
+    """レポートをFirestoreとJSONファイルに保存する"""
+    # Firestore保存
+    try:
+        from google.cloud import firestore as _firestore
+
+        db = _firestore.Client(project=config.project_id or None)
+        db.collection("eval_results").add(
+            {
+                **asdict(report),
+                "timestamp": _firestore.SERVER_TIMESTAMP,
+            }
+        )
+    except Exception as e:
+        print(f"  [Reporter] Firestore save failed: {e}")
+
+    # ローカルファイル保存（フォールバック）
+    try:
+        os.makedirs(config.results_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_path = os.path.join(config.results_dir, f"eval_{timestamp}.json")
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(asdict(report), f, ensure_ascii=False, indent=2)
+        return file_path
+    except Exception:
+        return "(saved to Firestore only)"

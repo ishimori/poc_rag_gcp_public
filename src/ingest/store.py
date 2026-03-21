@@ -23,9 +23,7 @@ def _content_hash(content: str) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
-def store_chunks(
-    chunks: list[Chunk], embeddings: list[list[float]]
-) -> dict[str, int]:
+def store_chunks(chunks: list[Chunk], embeddings: list[list[float]]) -> dict[str, int]:
     """チャンクとEmbeddingをFirestoreに保存する"""
     db = _get_db()
     collection = db.collection(config.collection_name)
@@ -40,13 +38,11 @@ def store_chunks(
         batch_chunks = chunks[i : i + batch_size]
         batch_embeddings = embeddings[i : i + batch_size]
 
-        for chunk, embedding in zip(batch_chunks, batch_embeddings):
+        for chunk, embedding in zip(batch_chunks, batch_embeddings, strict=False):
             content_hash = _content_hash(chunk.content)
 
             # 重複チェック
-            existing = (
-                collection.where("content_hash", "==", content_hash).limit(1).get()
-            )
+            existing = collection.where("content_hash", "==", content_hash).limit(1).get()
             if len(list(existing)) > 0:
                 skipped += 1
                 continue

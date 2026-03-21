@@ -1,7 +1,7 @@
 """インジェストパイプライン: test-data/sources/ → チャンク分割 → Embedding → Firestore"""
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.config import config
 from src.ingest.chunker import chunk_document
 from src.ingest.embedder import embed_texts
-from src.ingest.store import store_chunks, clear_collection
+from src.ingest.store import clear_collection, store_chunks
 
 SOURCES_DIR = "test-data/sources"
 
@@ -45,7 +45,7 @@ def main():
     total_skipped = 0
 
     for file_name, file_path in files:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             text = f.read()
 
         # チャンク分割

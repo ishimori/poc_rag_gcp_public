@@ -27,9 +27,7 @@ class EvalResult:
     passed: bool = False
 
 
-def score_by_keywords(
-    answer: str, expected_keywords: list[str]
-) -> dict[str, float | list[str]]:
+def score_by_keywords(answer: str, expected_keywords: list[str]) -> dict[str, float | list[str]]:
     """キーワードベースのスコアリング"""
     if not expected_keywords:
         return {"score": 1.0, "matched": [], "missed": []}

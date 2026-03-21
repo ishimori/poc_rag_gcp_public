@@ -171,7 +171,7 @@ def main():
             md = text_to_markdown(title, text)
 
             # frontmatter 追加
-            content = f"---\ncategory: wikipedia\nsecurity_level: public\nallowed_groups: [\"all\"]\n---\n\n{md}\n"
+            content = f'---\ncategory: wikipedia\nsecurity_level: public\nallowed_groups: ["all"]\n---\n\n{md}\n'
 
             with open(out_path, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -181,7 +181,7 @@ def main():
 
             time.sleep(0.5)  # API rate limiting
 
-    print(f"\n=== Summary ===")
+    print("\n=== Summary ===")
     print(f"Total: {total}, Fetched: {fetched}, Skipped: {skipped}")
 
 

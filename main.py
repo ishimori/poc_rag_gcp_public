@@ -53,6 +53,7 @@ def _error(msg: str, status: int = 400) -> https_fn.Response:
 # Query logging
 # ---------------------------------------------------------------------------
 
+
 def _save_query_log(
     query: str,
     answer: str,
@@ -63,19 +64,18 @@ def _save_query_log(
     """クエリログを Firestore query_logs コレクションに保存する"""
     try:
         db = _get_firestore_client()
-        db.collection("query_logs").add({
-            "query": query,
-            "answer": answer,
-            "model": model or "",
-            "elapsed_ms": elapsed_ms,
-            "sources": [
-                {"file": s.get("source_file", ""), "score": s.get("score", 0)}
-                for s in sources
-            ],
-            "source_count": len(sources),
-            "no_answer": NO_ANSWER_MARKER in answer,
-            "timestamp": firestore.SERVER_TIMESTAMP,
-        })
+        db.collection("query_logs").add(
+            {
+                "query": query,
+                "answer": answer,
+                "model": model or "",
+                "elapsed_ms": elapsed_ms,
+                "sources": [{"file": s.get("source_file", ""), "score": s.get("score", 0)} for s in sources],
+                "source_count": len(sources),
+                "no_answer": NO_ANSWER_MARKER in answer,
+                "timestamp": firestore.SERVER_TIMESTAMP,
+            }
+        )
     except Exception as e:
         print(f"  [QueryLog] Failed to save log: {e}")
 
@@ -83,6 +83,7 @@ def _save_query_log(
 # ---------------------------------------------------------------------------
 # chat — RAG チャット API
 # ---------------------------------------------------------------------------
+
 
 @https_fn.on_request(
     region="asia-northeast1",
@@ -134,6 +135,7 @@ def chat(req: https_fn.Request) -> https_fn.Response:
 # admin — 管理系 API（パスベースルーティング）
 # ---------------------------------------------------------------------------
 
+
 @https_fn.on_request(
     region="asia-northeast1",
     memory=options.MemoryOption.GB_1,
@@ -146,7 +148,7 @@ def admin(req: https_fn.Request) -> https_fn.Response:
     path = req.path.rstrip("/")
     # Firebase Hosting rewrites /api/admin/** → admin function
     if path.startswith("/api/admin"):
-        path = path[len("/api/admin"):]
+        path = path[len("/api/admin") :]
     method = req.method
 
     if path == "/ingest" and method == "POST":
@@ -169,12 +171,12 @@ def admin(req: https_fn.Request) -> https_fn.Response:
 
 # --- Ingest ---
 
+
 def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
     """POST /ingest — インジェスト実行"""
-    from src.config import config
     from src.ingest.chunker import chunk_document
     from src.ingest.embedder import embed_texts
-    from src.ingest.store import store_chunks, clear_collection
+    from src.ingest.store import clear_collection, store_chunks
 
     body = req.get_json(force=True, silent=True) or {}
     should_clear = body.get("clear", False)
@@ -198,7 +200,7 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
     file_results = []
 
     for file_name, file_path in files:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             text = f.read()
 
         chunks = chunk_document(text, file_name)
@@ -209,34 +211,39 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
         total_chunks += len(chunks)
         total_stored += result["stored"]
         total_skipped += result["skipped"]
-        file_results.append({
-            "file": file_name,
-            "chunks": len(chunks),
-            "stored": result["stored"],
-            "skipped": result["skipped"],
-        })
+        file_results.append(
+            {
+                "file": file_name,
+                "chunks": len(chunks),
+                "stored": result["stored"],
+                "skipped": result["skipped"],
+            }
+        )
 
-    return _json_response({
-        "cleared": deleted,
-        "files": len(files),
-        "total_chunks": total_chunks,
-        "stored": total_stored,
-        "skipped": total_skipped,
-        "details": file_results,
-    })
+    return _json_response(
+        {
+            "cleared": deleted,
+            "files": len(files),
+            "total_chunks": total_chunks,
+            "stored": total_stored,
+            "skipped": total_skipped,
+            "details": file_results,
+        }
+    )
 
 
 # --- Evaluate ---
 
+
 def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
     """POST /evaluate — 評価実行"""
-    from src.evaluate.scorer import EvalCase
-    from src.evaluate.runner import run_evaluation
     from src.evaluate.reporter import generate_report, save_report
+    from src.evaluate.runner import run_evaluation
+    from src.evaluate.scorer import EvalCase
 
     eval_dataset = "test-data/golden/eval_dataset.jsonl"
 
-    with open(eval_dataset, "r", encoding="utf-8") as f:
+    with open(eval_dataset, encoding="utf-8") as f:
         lines = [line.strip() for line in f if line.strip()]
 
     cases = []
@@ -257,14 +264,40 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
     report = generate_report(results)
     file_path = save_report(report)
 
-    return _json_response({
-        "report": asdict(report),
-        "saved_to": file_path,
-    })
+    return _json_response(
+        {
+            "report": asdict(report),
+            "saved_to": file_path,
+        }
+    )
 
 
 def _handle_evaluate_results(req: https_fn.Request) -> https_fn.Response:
-    """GET /evaluate/results — 評価結果一覧取得"""
+    """GET /evaluate/results — 評価結果一覧取得（Firestore優先、フォールバックでローカルファイル）"""
+    # Firestoreから取得を試みる
+    try:
+        db = _get_firestore_client()
+        docs = list(
+            db.collection("eval_results").order_by("date", direction=firestore.Query.DESCENDING).limit(50).get()
+        )
+        if docs:
+            results = []
+            for doc in docs:
+                data = doc.to_dict() or {}
+                results.append(
+                    {
+                        "file": doc.id,
+                        "date": data.get("date", ""),
+                        "config_params": data.get("config_params", {}),
+                        "overall": data.get("overall", {}),
+                        "score_by_type": data.get("score_by_type", {}),
+                    }
+                )
+            return _json_response(results)
+    except Exception as e:
+        print(f"  [EvalResults] Firestore read failed: {e}")
+
+    # フォールバック: ローカルファイルから読み込み
     from src.config import config
 
     results_dir = config.results_dir
@@ -272,23 +305,24 @@ def _handle_evaluate_results(req: https_fn.Request) -> https_fn.Response:
         return _json_response([])
 
     files = sorted(
-        (f for f in os.listdir(results_dir)
-         if f.startswith("eval_") and f.endswith(".json")),
+        (f for f in os.listdir(results_dir) if f.startswith("eval_") and f.endswith(".json")),
         reverse=True,
     )
 
     results = []
     for fname in files:
         fpath = os.path.join(results_dir, fname)
-        with open(fpath, "r", encoding="utf-8") as f:
+        with open(fpath, encoding="utf-8") as f:
             data = json.load(f)
-        results.append({
-            "file": fname,
-            "date": data.get("date", ""),
-            "config_params": data.get("config_params", {}),
-            "overall": data.get("overall", {}),
-            "score_by_type": data.get("score_by_type", {}),
-        })
+        results.append(
+            {
+                "file": fname,
+                "date": data.get("date", ""),
+                "config_params": data.get("config_params", {}),
+                "overall": data.get("overall", {}),
+                "score_by_type": data.get("score_by_type", {}),
+            }
+        )
 
     return _json_response(results)
 
@@ -298,6 +332,7 @@ def _handle_evaluate_results(req: https_fn.Request) -> https_fn.Response:
 _TUNABLE_PARAMS: dict[str, type] = {
     "chunk_size": int,
     "chunk_overlap": int,
+    "header_injection": bool,
     "top_k": int,
     "rerank_top_n": int,
     "rerank_threshold": float,
@@ -326,7 +361,11 @@ def _handle_config_put(req: https_fn.Request) -> https_fn.Response:
             errors.append(f"Unknown parameter: {key}")
             continue
         try:
-            typed_value = _TUNABLE_PARAMS[key](value)
+            expected_type = _TUNABLE_PARAMS[key]
+            if expected_type is bool:
+                typed_value = value if isinstance(value, bool) else str(value).lower() not in ("false", "0", "no")
+            else:
+                typed_value = expected_type(value)
             setattr(config, key, typed_value)
             updated[key] = typed_value
         except (ValueError, TypeError) as e:
@@ -340,6 +379,7 @@ def _handle_config_put(req: https_fn.Request) -> https_fn.Response:
 
 
 # --- Chunks ---
+
 
 def _handle_chunks(req: https_fn.Request) -> https_fn.Response:
     """GET /chunks — チャンク一覧取得（embedding除外）"""
@@ -374,20 +414,21 @@ def _handle_chunks(req: https_fn.Request) -> https_fn.Response:
         data["content_preview"] = content[:50] + ("..." if len(content) > 50 else "")
         chunks.append(data)
 
-    return _json_response({
-        "chunks": chunks,
-        "count": len(chunks),
-    })
+    return _json_response(
+        {
+            "chunks": chunks,
+            "count": len(chunks),
+        }
+    )
 
 
 # --- Logs ---
 
+
 def _handle_logs(req: https_fn.Request) -> https_fn.Response:
     """GET /logs — クエリログ一覧取得"""
     db = _get_firestore_client()
-    query = db.collection("query_logs").order_by(
-        "timestamp", direction=firestore.Query.DESCENDING
-    )
+    query = db.collection("query_logs").order_by("timestamp", direction=firestore.Query.DESCENDING)
 
     # フィルタ
     no_answer = req.args.get("no_answer")
@@ -401,19 +442,23 @@ def _handle_logs(req: https_fn.Request) -> https_fn.Response:
     for doc in docs:
         data = doc.to_dict() or {}
         ts = data.get("timestamp")
-        logs.append({
-            "id": doc.id,
-            "query": data.get("query", ""),
-            "answer": data.get("answer", ""),
-            "model": data.get("model", ""),
-            "elapsed_ms": data.get("elapsed_ms", 0),
-            "sources": data.get("sources", []),
-            "source_count": data.get("source_count", 0),
-            "no_answer": data.get("no_answer", False),
-            "timestamp": ts.isoformat() if ts else None,
-        })
+        logs.append(
+            {
+                "id": doc.id,
+                "query": data.get("query", ""),
+                "answer": data.get("answer", ""),
+                "model": data.get("model", ""),
+                "elapsed_ms": data.get("elapsed_ms", 0),
+                "sources": data.get("sources", []),
+                "source_count": data.get("source_count", 0),
+                "no_answer": data.get("no_answer", False),
+                "timestamp": ts.isoformat() if ts else None,
+            }
+        )
 
-    return _json_response({
-        "logs": logs,
-        "count": len(logs),
-    })
+    return _json_response(
+        {
+            "logs": logs,
+            "count": len(logs),
+        }
+    )

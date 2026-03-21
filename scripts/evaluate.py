@@ -12,9 +12,9 @@ if sys.stdout.encoding != "utf-8":
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.evaluate.scorer import EvalCase
-from src.evaluate.runner import run_evaluation
 from src.evaluate.reporter import generate_report, print_report, save_report
+from src.evaluate.runner import run_evaluation
+from src.evaluate.scorer import EvalCase
 
 EVAL_DATASET = "test-data/golden/eval_dataset.jsonl"
 
@@ -23,7 +23,7 @@ def main():
     print("=== RAG Evaluation ===")
     print()
 
-    with open(EVAL_DATASET, "r", encoding="utf-8") as f:
+    with open(EVAL_DATASET, encoding="utf-8") as f:
         lines = [line.strip() for line in f if line.strip()]
 
     cases = []

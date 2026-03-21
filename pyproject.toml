@@ -14,3 +14,26 @@ dependencies = [
     "firebase-functions>=0.4.0",
     "functions-framework>=3.0.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11.0",
+    "pre-commit>=4.0.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes（未使用変数・import等）
+    "I",    # isort（import順序）
+    "UP",   # pyupgrade（古い構文の検出）
+    "B",    # flake8-bugbear（バグになりやすいパターン）
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]

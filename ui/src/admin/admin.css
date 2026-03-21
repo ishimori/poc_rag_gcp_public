@@ -94,6 +94,44 @@
   margin-top: 2px;
 }
 
+/* Toggle grid */
+.admin-toggle-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.admin-toggle input[type="checkbox"] {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+}
+
+.admin-toggle-label {
+  font-weight: 600;
+  display: block;
+}
+
+.admin-toggle-warn {
+  display: block;
+  font-size: 0.75rem;
+  color: #b06000;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 .admin-error {
   padding: 10px 14px;
   margin-bottom: 16px;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { getLogs, type QueryLog } from './api'
 
 export default function Logs() {
@@ -14,7 +14,7 @@ export default function Logs() {
   // Detail
   const [selected, setSelected] = useState<QueryLog | null>(null)
 
-  async function handleFetch() {
+  const handleFetch = useCallback(async () => {
     setLoading(true)
     setError('')
     setSelected(null)
@@ -30,11 +30,11 @@ export default function Logs() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [noAnswerOnly, limit])
 
   useEffect(() => {
     handleFetch()
-  }, [])
+  }, [handleFetch])
 
   function formatTimestamp(ts: string | null) {
     if (!ts) return '-'

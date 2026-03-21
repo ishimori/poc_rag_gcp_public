@@ -17,6 +17,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export interface ConfigParams {
   chunk_size: number
   chunk_overlap: number
+  header_injection: boolean
   top_k: number
   rerank_top_n: number
   rerank_threshold: number

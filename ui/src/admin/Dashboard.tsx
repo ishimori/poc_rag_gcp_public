@@ -68,14 +68,15 @@ export default function Dashboard() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setError('')
+    let active = true
     Promise.all([
-      getConfig().then(setConfig),
-      getEvalResults().then((r) => setLatestEval(r[0] ?? null)),
-      getChunks({ limit: 1 }).then((r) => setChunkCount(r.count > 0 ? null : 0)),
-    ]).catch((e) => setError(e.message))
+      getConfig().then((c) => { if (active) setConfig(c) }),
+      getEvalResults().then((r) => { if (active) setLatestEval(r[0] ?? null) }),
+      getChunks({ limit: 1 }).then((r) => { if (active && r.count === 0) setChunkCount(0) }),
+    ]).catch((e) => { if (active) setError(e.message) })
 
-    getChunks({ limit: 500 }).then((r) => setChunkCount(r.count)).catch(() => {})
+    getChunks({ limit: 500 }).then((r) => { if (active) setChunkCount(r.count) }).catch(() => {})
+    return () => { active = false }
   }, [])
 
   const overallLevel = latestEval ? getScoreLevel(latestEval.overall.rate) : null
