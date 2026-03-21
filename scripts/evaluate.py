@@ -37,6 +37,7 @@ def main():
                 expected_keywords=data["expected_keywords"],
                 type=data["type"],
                 category=data["category"],
+                requires=data.get("requires", ""),
             )
         )
 

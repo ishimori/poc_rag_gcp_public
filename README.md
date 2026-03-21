@@ -56,8 +56,10 @@ bash scripts/dev.sh stop   # 停止
 
 ## テスト・評価
 
-- 自動評価パイプライン: `test-data/golden/eval_dataset.jsonl`（45件 × 10パターン）
-- キーワードマッチによるスコアリング
+- 自動評価パイプライン: `test-data/golden/eval_dataset.jsonl`（74件 × 12パターン）
+- ハイブリッドスコアリング: LLM-as-Judge（主判定）+ キーワードマッチ（参考値）
+- 未実装機能テスト（ambiguous/security）は `requires` フィールドで自動除外
+- 現在のベースライン: 21/64 (32.8%)
 - 管理画面（`/admin/tuning`）から Ingest → Evaluate → スコア比較のサイクルを実行可能
 
 ## セキュリティ

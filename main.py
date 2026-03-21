@@ -281,6 +281,7 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
                 expected_keywords=data["expected_keywords"],
                 type=data["type"],
                 category=data["category"],
+                requires=data.get("requires", ""),
             )
         )
 
