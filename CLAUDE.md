@@ -34,3 +34,13 @@
 
 コード変更時は対応ドキュメントを同期すること。
 対象ファイルと同期タイミングは [DOCUMENT-MAP.md](DOCUMENT-MAP.md) を参照。
+
+### RAG精度改善の記録（重要）
+
+以下のいずれかを行った場合、[doc/record/rag_improvement_history.md](doc/record/rag_improvement_history.md) を更新すること:
+- フル評価（`evaluate.py`）を実行してスコアが確定した
+- 検索技術の追加・変更・ON/OFF切替を行った
+- チャンクサイズ変更・再Ingestを行った
+- テストデータや評価方法を変更した
+
+更新内容: スコア推移表・タイムライン図・施策詳細に追記し、最終更新日時を更新する。
