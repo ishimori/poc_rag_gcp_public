@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import Markdown from 'react-markdown'
 import './App.css'
 
 interface Source {
@@ -150,7 +151,7 @@ export default function App() {
             )}
             {messages.map((msg, i) => (
               <div key={i} className={`message ${msg.role}`}>
-                <div className="message-content">{msg.content}</div>
+                <div className="message-content"><Markdown>{msg.content}</Markdown></div>
                 {msg.role === 'assistant' && (msg.elapsedMs || msg.model) && (
                   <div className="message-meta">
                     {msg.model && <span>{msg.model}</span>}

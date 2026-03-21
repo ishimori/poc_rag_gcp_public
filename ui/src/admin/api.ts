@@ -107,7 +107,7 @@ export interface QueryLog {
   answer: string
   model: string
   elapsed_ms: number
-  sources: string[]
+  sources: (string | { file: string; score: number })[]
   source_count: number
   no_answer: boolean
   timestamp: string | null

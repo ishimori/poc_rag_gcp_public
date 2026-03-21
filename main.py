@@ -68,7 +68,10 @@ def _save_query_log(
             "answer": answer,
             "model": model or "",
             "elapsed_ms": elapsed_ms,
-            "sources": [s.get("source_file", "") for s in sources],
+            "sources": [
+                {"file": s.get("source_file", ""), "score": s.get("score", 0)}
+                for s in sources
+            ],
             "source_count": len(sources),
             "no_answer": NO_ANSWER_MARKER in answer,
             "timestamp": firestore.SERVER_TIMESTAMP,

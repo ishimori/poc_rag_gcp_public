@@ -89,7 +89,7 @@ export default function Logs() {
             </div>
             <div className="admin-card">
               <div className="admin-card-value">
-                {count > 0 ? Math.round(logs.reduce((s, l) => s + l.elapsed_ms, 0) / count) : 0}ms
+                {count > 0 ? (logs.reduce((s, l) => s + l.elapsed_ms, 0) / count / 1000).toFixed(1) : 0}s
               </div>
               <div className="admin-card-label">Avg Response</div>
             </div>
@@ -123,7 +123,7 @@ export default function Logs() {
                     <td style={{ whiteSpace: 'nowrap' }}>{formatTimestamp(log.timestamp)}</td>
                     <td className="data-preview">{log.query.length > 60 ? log.query.slice(0, 60) + '...' : log.query}</td>
                     <td>{log.model || '-'}</td>
-                    <td style={{ textAlign: 'right' }}>{log.elapsed_ms}ms</td>
+                    <td style={{ textAlign: 'right' }}>{(log.elapsed_ms / 1000).toFixed(1)}s</td>
                     <td style={{ textAlign: 'right' }}>{log.source_count}</td>
                     <td>{log.no_answer ? <span className="text-fail">Yes</span> : <span className="text-pass">No</span>}</td>
                   </tr>
@@ -143,9 +143,26 @@ export default function Logs() {
               <tr><td>ID</td><td>{selected.id}</td></tr>
               <tr><td>Timestamp</td><td>{formatTimestamp(selected.timestamp)}</td></tr>
               <tr><td>Model</td><td>{selected.model || '-'}</td></tr>
-              <tr><td>Elapsed</td><td>{selected.elapsed_ms}ms</td></tr>
-              <tr><td>Sources</td><td>{selected.sources.join(', ') || '-'}</td></tr>
+              <tr><td>Elapsed</td><td>{(selected.elapsed_ms / 1000).toFixed(1)}s</td></tr>
               <tr><td>No Answer</td><td>{selected.no_answer ? 'Yes' : 'No'}</td></tr>
+            </tbody>
+          </table>
+          <h3 style={{ marginBottom: 4 }}>Sources</h3>
+          <table className="admin-table" style={{ marginBottom: 12 }}>
+            <thead>
+              <tr><th>File</th><th>Score</th></tr>
+            </thead>
+            <tbody>
+              {selected.sources.map((s, i) => {
+                const file = typeof s === 'string' ? s : s.file
+                const score = typeof s === 'string' ? null : s.score
+                return (
+                  <tr key={i}>
+                    <td>{file}</td>
+                    <td style={{ textAlign: 'right' }}>{score !== null ? score.toFixed(3) : '-'}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
           <h3 style={{ marginBottom: 4 }}>Query</h3>
