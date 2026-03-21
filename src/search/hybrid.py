@@ -49,16 +49,28 @@ def hybrid_search(
     top_k: int | None = None,
     user_groups: list[str] | None = None,
 ) -> list[SearchResult]:
-    """ベクトル検索 + キーワード検索 → RRF統合"""
+    """ベクトル検索 + キーワード検索 → RRF統合（+ Multi-Query Expansion）"""
     k = top_k or config.top_k
 
-    # 両方の検索を実行
-    vector_results = vector_search(query, top_k=k, user_groups=user_groups)
-    keyword_results = keyword_search(query, top_k=k)
+    # 検索対象のクエリを準備
+    queries = [query]
+    if config.multi_query:
+        from src.search.query_expander import expand_query
+
+        expanded = expand_query(query)
+        queries.extend(expanded)
+        print(f"  [MultiQuery] expanded to {len(queries)} queries: {queries}")
+
+    # 各クエリで検索し、全結果を集約
+    all_vector: list[SearchResult] = []
+    all_keyword: list[SearchResult] = []
+    for q in queries:
+        all_vector.extend(vector_search(q, top_k=k, user_groups=user_groups))
+        all_keyword.extend(keyword_search(q, top_k=k))
 
     # RRF統合
-    merged = _merge_by_rrf(vector_results, keyword_results, config.rrf_k)
+    merged = _merge_by_rrf(all_vector, all_keyword, config.rrf_k)
 
     results = merged[:k]
-    print(f"  [HybridSearch] vector={len(vector_results)}, keyword={len(keyword_results)}, merged={len(results)}")
+    print(f"  [HybridSearch] vector={len(all_vector)}, keyword={len(all_keyword)}, merged={len(results)}")
     return results

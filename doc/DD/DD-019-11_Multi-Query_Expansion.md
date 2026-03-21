@@ -54,23 +54,29 @@ RRF統合（重複doc_idはスコア加算）
 
 ## 決定事項
 
-（Phase 0で検討）
+- **デフォルトOFF**（`config.multi_query = False`）で既存動作を維持
+- 展開数: `config.multi_query_count = 3`（original + 3 = 計4クエリ）
+- `hybrid.py` のRRFに統合（各クエリのベクトル検索 + キーワード検索結果を全て投入）
+- 温度0で再現性確保
+- 新規モジュール: `src/search/query_expander.py`
 
 ## タスク一覧
 
-### Phase 0: 事前精査
-- [ ] 📋 **各Phaseのタスク精査・詳細化**
-  - semantic 失敗4件のクエリと失敗原因を確認
-  - 展開プロンプトの設計
-- [ ] 😈 **Devil's Advocate調査**
-
-### Phase 1: 実装
-（Phase 0の決定後に詳細化）
+### Phase 1: 実装 ✅
+- [x] `src/config.py`: `multi_query: bool = False` + `multi_query_count: int = 3` 追加
+- [x] `src/search/query_expander.py`（新規）: LLMでクエリを複数展開するモジュール
+- [x] `src/search/hybrid.py`: `config.multi_query` ON時に展開クエリでも検索し、全結果をRRF統合
+- [x] `src/evaluate/scorer.py`: `FEATURE_MAP` に `multi_query` 追加
+- [x] 🔬 **機械検証（構文）**: `py_compile` 全ファイルOK
 
 ## ログ
 
 ### 2026-03-22
 - DD作成（DD-019からの派生、外部LLM分析結果に基づく）
+- Phase 1完了:
+  - `query_expander.py` 新規作成（Gemini 2.5 Flash, 温度0, JSON配列出力）
+  - `hybrid.py` にMulti-Query統合（全クエリの検索結果をRRFに投入）
+  - デフォルトOFF。`config.multi_query = True` で有効化
 
 ---
 
