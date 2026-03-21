@@ -151,6 +151,8 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         path = path[len("/api/admin") :]
     method = req.method
 
+    if path == "/sources" and method == "GET":
+        return _handle_sources(req)
     if path == "/ingest" and method == "POST":
         return _handle_ingest(req)
     if path == "/evaluate" and method == "POST":
@@ -167,6 +169,28 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         return _handle_logs(req)
 
     return _error(f"Not found: {method} {path}", 404)
+
+
+# --- Sources ---
+
+
+def _handle_sources(req: https_fn.Request) -> https_fn.Response:
+    """GET /sources — 取り込み対象のソースファイル一覧"""
+    sources_dir = "test-data/sources"
+    if not os.path.isdir(sources_dir):
+        return _json_response({"files": [], "count": 0})
+
+    files = []
+    for root, _dirs, fnames in os.walk(sources_dir):
+        for fname in sorted(fnames):
+            if fname.endswith(".md"):
+                full = os.path.join(root, fname)
+                rel = os.path.relpath(full, sources_dir).replace("\\", "/")
+                size = os.path.getsize(full)
+                files.append({"name": rel, "size": size})
+    files.sort(key=lambda f: f["name"])
+
+    return _json_response({"files": files, "count": len(files)})
 
 
 # --- Ingest ---

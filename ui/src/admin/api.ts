@@ -31,6 +31,17 @@ export function updateConfig(params: Partial<ConfigParams>): Promise<{ updated: 
   return request('/config', { method: 'PUT', body: JSON.stringify(params) })
 }
 
+// --- Sources ---
+
+export interface SourceFile {
+  name: string
+  size: number
+}
+
+export function getSources(): Promise<{ files: SourceFile[]; count: number }> {
+  return request('/sources')
+}
+
 // --- Ingest ---
 
 export interface IngestResult {

@@ -52,6 +52,8 @@ export default function DataBrowser() {
               <option value="hr">hr</option>
               <option value="finance">finance</option>
               <option value="general">general</option>
+              <option value="management">management</option>
+              <option value="wikipedia">wikipedia</option>
             </select>
           </label>
           <label className="admin-param">
@@ -105,7 +107,7 @@ export default function DataBrowser() {
                     <td>{c.chunk_index}</td>
                     <td><span className={`data-tag tag-${c.category}`}>{c.category}</span></td>
                     <td><span className={`data-tag tag-${c.security_level}`}>{c.security_level}</span></td>
-                    <td className="data-preview">{c.content_preview}</td>
+                    <td className="data-content-cell">{c.content}</td>
                   </tr>
                 ))}
               </tbody>

@@ -15,6 +15,24 @@
         { "fieldPath": "source_file", "order": "ASCENDING" },
         { "fieldPath": "chunk_index", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "chunks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "source_file", "order": "ASCENDING" },
+        { "fieldPath": "chunk_index", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "chunks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "security_level", "order": "ASCENDING" },
+        { "fieldPath": "source_file", "order": "ASCENDING" },
+        { "fieldPath": "chunk_index", "order": "ASCENDING" }
+      ]
     }
   ]
 }

@@ -358,19 +358,21 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  border: 1px solid #e0e0e0;
 }
 
 .admin-table th,
 .admin-table td {
   padding: 8px 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border: 1px solid #e0e0e0;
 }
 
 .admin-table th {
   font-weight: 600;
   color: #555;
   font-size: 0.8rem;
+  background: #f8f9fa;
 }
 
 .admin-table-total td {
@@ -459,15 +461,59 @@
 /* Actions */
 .admin-actions {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
 }
 
-.admin-action-group {
+.admin-action-card {
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.admin-action-header {
+  margin-bottom: 8px;
+}
+
+.admin-action-desc {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.admin-action-card .admin-checkbox {
+  margin-top: 4px;
+}
+
+.admin-source-files {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: #555;
+}
+
+.admin-source-files summary {
+  cursor: pointer;
+  color: #1a73e8;
+}
+
+.admin-source-files ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.admin-source-files li {
+  padding: 2px 0;
   display: flex;
-  gap: 8px;
-  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-file-size {
+  color: #999;
+  margin-left: 12px;
 }
 
 .admin-checkbox {
@@ -590,13 +636,12 @@
   background: #f5f8ff;
 }
 
-.data-preview {
+.data-content-cell {
   font-size: 0.78rem;
   color: #666;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 500px;
 }
 
 .data-tag {
@@ -612,6 +657,8 @@
 .tag-hr { background: #fef7e0; color: #b06000; }
 .tag-finance { background: #fce8e6; color: #c5221f; }
 .tag-general { background: #f1f3f4; color: #555; }
+.tag-management { background: #e8d5f5; color: #6a1b9a; }
+.tag-wikipedia { background: #f1f3f4; color: #888; }
 .tag-public { background: #e6f4ea; color: #1e7e34; }
 .tag-internal { background: #fef7e0; color: #b06000; }
 .tag-confidential { background: #fce8e6; color: #c5221f; }

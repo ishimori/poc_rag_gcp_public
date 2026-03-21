@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-  getConfig, updateConfig, runIngest, runEvaluate,
-  type ConfigParams, type EvalReport, type IngestResult,
+  getConfig, updateConfig, runIngest, runEvaluate, getSources,
+  type ConfigParams, type EvalReport, type IngestResult, type SourceFile,
 } from './api'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
@@ -20,6 +20,8 @@ export default function Tuning() {
 
   const [retuneStatus, setRetuneStatus] = useState<Status>('idle')
 
+  const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([])
+
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export default function Tuning() {
       setConfig(c)
       setDraft(c)
     }).catch((e) => setError(e.message))
+    getSources().then((res) => setSourceFiles(res.files)).catch(() => {})
   }, [])
 
   function handleDraftChange(key: keyof ConfigParams, value: string) {
@@ -198,7 +201,13 @@ export default function Tuning() {
       <div className="admin-section">
         <h2>Actions</h2>
         <div className="admin-actions">
-          <div className="admin-action-group">
+          <div className="admin-action-card">
+            <div className="admin-action-header">
+              <button className="admin-btn" onClick={handleIngest} disabled={isRunning || isProd}>
+                {ingestStatus === 'loading' ? '取り込み中...' : 'データ取り込み（Ingest）'}
+              </button>
+            </div>
+            <p className="admin-action-desc">ソース文書を分割・ベクトル化してDBに格納する</p>
             <label className="admin-checkbox">
               <input
                 type="checkbox"
@@ -206,31 +215,41 @@ export default function Tuning() {
                 onChange={(e) => setIngestClear(e.target.checked)}
                 disabled={isRunning}
               />
-              既存データを全削除してから取り込む
-              <span className="admin-param-hint" style={{ display: 'block', marginLeft: '24px' }}>
-                {ingestClear
-                  ? 'ON: DBを空にしてから全文書を再取り込み（パラメータ変更時はこちら）'
-                  : 'OFF: 新規・変更分だけ追加（既存データはそのまま）'}
-              </span>
+              {ingestClear
+                ? 'DBを空にしてから全文書を再取り込み（パラメータ変更時はこちら）'
+                : '新規・変更分だけ追加（既存データはそのまま）'}
             </label>
-            <button className="admin-btn" onClick={handleIngest} disabled={isRunning || isProd}>
-              {ingestStatus === 'loading' ? '取り込み中...' : 'データ取り込み（Ingest）'}
-            </button>
-            <span className="admin-param-hint">ソース文書を分割・ベクトル化してDBに格納する</span>
+            {sourceFiles.length > 0 && (
+              <details className="admin-source-files">
+                <summary>取り込み対象ファイル（{sourceFiles.length}件）</summary>
+                <ul>
+                  {sourceFiles.map((f) => (
+                    <li key={f.name}>
+                      {f.name}
+                      <span className="admin-file-size">{(f.size / 1024).toFixed(1)} KB</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
 
-          <div className="admin-action-group">
-            <button className="admin-btn" onClick={handleEvaluate} disabled={isRunning || isProd}>
-              {evalStatus === 'loading' ? '評価中...' : '精度評価（Evaluate）'}
-            </button>
-            <span className="admin-param-hint">テストケースで質問→回答し、正答率を測定する</span>
+          <div className="admin-action-card">
+            <div className="admin-action-header">
+              <button className="admin-btn" onClick={handleEvaluate} disabled={isRunning || isProd}>
+                {evalStatus === 'loading' ? '評価中...' : '精度評価（Evaluate）'}
+              </button>
+            </div>
+            <p className="admin-action-desc">テストケースで質問→回答し、正答率を測定する</p>
           </div>
 
-          <div className="admin-action-group">
-            <button className="admin-btn admin-btn-primary" onClick={handleRetune} disabled={isRunning || isProd}>
-              {retuneStatus === 'loading' ? 'Re-tune中...' : '一括実行（パラメータ保存 → 取り込み → 評価）'}
-            </button>
-            <span className="admin-param-hint">上の3ステップをまとめて実行する</span>
+          <div className="admin-action-card">
+            <div className="admin-action-header">
+              <button className="admin-btn admin-btn-primary" onClick={handleRetune} disabled={isRunning || isProd}>
+                {retuneStatus === 'loading' ? 'Re-tune中...' : '一括実行（パラメータ保存 → 取り込み → 評価）'}
+              </button>
+            </div>
+            <p className="admin-action-desc">上の3ステップをまとめて実行する</p>
           </div>
         </div>
       </div>
