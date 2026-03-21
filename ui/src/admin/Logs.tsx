@@ -43,7 +43,7 @@ export default function Logs() {
   }
 
   return (
-    <div className="admin-page">
+    <div className="admin-page-wide">
       <h1>Query Logs</h1>
       {error && <div className="admin-error">{error}</div>}
 
@@ -97,82 +97,84 @@ export default function Logs() {
         </div>
       )}
 
-      {/* Results */}
+      {/* Results + Detail side-by-side */}
       {count !== null && (
-        <div className="admin-section">
-          <h2>Logs ({count})</h2>
-          <div className="data-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Query</th>
-                  <th>Model</th>
-                  <th>Time</th>
-                  <th>Sources</th>
-                  <th>No Answer</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => (
-                  <tr
-                    key={log.id}
-                    className={`data-row ${selected?.id === log.id ? 'admin-row-selected' : ''}`}
-                    onClick={() => setSelected(selected?.id === log.id ? null : log)}
-                  >
-                    <td style={{ whiteSpace: 'nowrap' }}>{formatTimestamp(log.timestamp)}</td>
-                    <td className="data-preview">{log.query.length > 60 ? log.query.slice(0, 60) + '...' : log.query}</td>
-                    <td>{log.model || '-'}</td>
-                    <td style={{ textAlign: 'right' }}>{(log.elapsed_ms / 1000).toFixed(1)}s</td>
-                    <td style={{ textAlign: 'right' }}>{log.source_count}</td>
-                    <td>{log.no_answer ? <span className="text-fail">Yes</span> : <span className="text-pass">No</span>}</td>
+        <div className="logs-split" style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          {/* Left: Log list */}
+          <div className="admin-section" style={{ flex: selected ? '0 0 50%' : '1 1 100%', minWidth: 0, transition: 'flex 0.2s' }}>
+            <h2>Logs ({count})</h2>
+            <div className="data-table-wrap" style={{ maxHeight: 'calc(100vh - 300px)', overflowY: 'auto' }}>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>Query</th>
+                    <th>Time</th>
+                    <th>No Answer</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr
+                      key={log.id}
+                      className={`data-row ${selected?.id === log.id ? 'admin-row-selected' : ''}`}
+                      onClick={() => setSelected(selected?.id === log.id ? null : log)}
+                    >
+                      <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>{formatTimestamp(log.timestamp)}</td>
+                      <td className="data-preview" style={{ maxWidth: 300 }}>{log.query.length > 40 ? log.query.slice(0, 40) + '…' : log.query}</td>
+                      <td style={{ textAlign: 'right' }}>{(log.elapsed_ms / 1000).toFixed(1)}s</td>
+                      <td>{log.no_answer ? <span className="text-fail">Yes</span> : <span className="text-pass">No</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Detail */}
-      {selected && (
-        <div className="admin-section">
-          <h2>Detail</h2>
-          <table className="admin-config-table" style={{ marginBottom: 12 }}>
-            <tbody>
-              <tr><td>ID</td><td>{selected.id}</td></tr>
-              <tr><td>Timestamp</td><td>{formatTimestamp(selected.timestamp)}</td></tr>
-              <tr><td>Model</td><td>{selected.model || '-'}</td></tr>
-              <tr><td>Elapsed</td><td>{(selected.elapsed_ms / 1000).toFixed(1)}s</td></tr>
-              <tr><td>No Answer</td><td>{selected.no_answer ? 'Yes' : 'No'}</td></tr>
-            </tbody>
-          </table>
-          <h3 style={{ marginBottom: 4 }}>Sources</h3>
-          <table className="admin-table" style={{ marginBottom: 12 }}>
-            <thead>
-              <tr><th>File</th><th>Score</th></tr>
-            </thead>
-            <tbody>
-              {selected.sources.map((s, i) => {
-                const file = typeof s === 'string' ? s : s.file
-                const score = typeof s === 'string' ? null : s.score
-                return (
-                  <tr key={i}>
-                    <td>{file}</td>
-                    <td style={{ textAlign: 'right' }}>{score !== null ? score.toFixed(3) : '-'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-          <h3 style={{ marginBottom: 4 }}>Query</h3>
-          <div className="data-content-full" style={{ marginBottom: 12 }}>
-            {selected.query}
-          </div>
-          <h3 style={{ marginBottom: 4 }}>Answer</h3>
-          <div className="data-content-full">
-            {selected.answer}
-          </div>
+          {/* Right: Detail panel */}
+          {selected && (
+            <div className="admin-section" style={{ flex: '0 0 48%', minWidth: 0, position: 'sticky', top: 16, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <h2 style={{ margin: 0 }}>Detail</h2>
+                <button className="admin-btn-sm" onClick={() => setSelected(null)}>✕ 閉じる</button>
+              </div>
+              <table className="admin-config-table" style={{ marginBottom: 12 }}>
+                <tbody>
+                  <tr><td>ID</td><td>{selected.id}</td></tr>
+                  <tr><td>Timestamp</td><td>{formatTimestamp(selected.timestamp)}</td></tr>
+                  <tr><td>Model</td><td>{selected.model || '-'}</td></tr>
+                  <tr><td>Elapsed</td><td>{(selected.elapsed_ms / 1000).toFixed(1)}s</td></tr>
+                  <tr><td>No Answer</td><td>{selected.no_answer ? 'Yes' : 'No'}</td></tr>
+                </tbody>
+              </table>
+              <h3 style={{ marginBottom: 4 }}>Sources ({selected.source_count})</h3>
+              <table className="admin-table" style={{ marginBottom: 12 }}>
+                <thead>
+                  <tr><th>File</th><th>Score</th></tr>
+                </thead>
+                <tbody>
+                  {selected.sources.map((s, i) => {
+                    const file = typeof s === 'string' ? s : s.file
+                    const score = typeof s === 'string' ? null : s.score
+                    return (
+                      <tr key={i}>
+                        <td>{file}</td>
+                        <td style={{ textAlign: 'right' }}>{score !== null ? score.toFixed(3) : '-'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              <h3 style={{ marginBottom: 4 }}>Query</h3>
+              <div className="data-content-full" style={{ marginBottom: 12 }}>
+                {selected.query}
+              </div>
+              <h3 style={{ marginBottom: 4 }}>Answer</h3>
+              <div className="data-content-full">
+                {selected.answer}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

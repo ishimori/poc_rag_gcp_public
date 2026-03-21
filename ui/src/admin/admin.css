@@ -66,13 +66,20 @@
   max-width: 1100px;
 }
 
-.admin-page h1 {
+.admin-page-wide {
+  padding: 24px 32px;
+  max-width: 1600px;
+}
+
+.admin-page h1,
+.admin-page-wide h1 {
   margin: 0 0 20px;
   font-size: 1.4rem;
   color: #222;
 }
 
-.admin-page h2 {
+.admin-page h2,
+.admin-page-wide h2 {
   margin: 0 0 12px;
   font-size: 1.05rem;
   color: #333;
@@ -522,6 +529,50 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* Eval progress */
+.admin-eval-progress {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #555;
+}
+
+.admin-eval-progress-info {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.admin-progress-bar {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.admin-progress-bar-fill {
+  height: 100%;
+  background: #1a73e8;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.admin-eval-progress-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.admin-eval-progress-current {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #666;
 }
 
 /* Eval summary */
