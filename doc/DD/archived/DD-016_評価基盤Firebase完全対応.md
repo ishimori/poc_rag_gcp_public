@@ -2,7 +2,7 @@
 
 | 作成日 | 更新日 | ステータス |
 |--------|--------|------------|
-| 2026-03-21 | 2026-03-21 | 進行中 |
+| 2026-03-21 | 2026-03-21 | 完了 |
 
 ## 目的
 
@@ -47,9 +47,10 @@ Evaluate / Ingest / History の全機能をFirebase Hosting + Cloud Functions上
 
 ## 決定事項
 
-1. **A案を採用**: test-dataをデプロイ対象に含め、評価結果をFirestoreに保存
+1. **A案を修正採用**: 評価結果のFirestore保存のみ実施。test-dataのデプロイは不要（Evaluate/IngestはCF上ではタイムアウトするためローカル専用）
 2. 既存の `results/` ディレクトリへのファイル保存は**ローカル互換として残す**（try-except でFirestore書き込み失敗時のフォールバック）
 3. UIのAPI呼び出しは変更不要（レスポンス形式は同じ）
+4. **運用方針**: ローカルでEvaluate/Ingest/Tuning → Firestore保存 → Firebase HostingのHistory/Chat/Logsで閲覧
 
 ## タスク一覧
 
@@ -57,10 +58,9 @@ Evaluate / Ingest / History の全機能をFirebase Hosting + Cloud Functions上
 - [x] 📋 **タスク精査・詳細化** — 変更対象4ファイルの具体的な変更内容を確定
 - [x] 😈 **Devil's Advocate調査** — 下記DA記録参照
 
-### Phase 1: test-dataのデプロイ対応
-- [x] `firebase.json` — ignoreリストから `test-data` を削除
-- [ ] 🔬 **機械検証**: `firebase deploy --only functions` でデプロイ成功すること（PH3で実施）
-- [x] 😈 **DA批判レビュー** — PH0で実施済み
+### ~~Phase 1: test-dataのデプロイ対応~~ （取り消し）
+- ~~`firebase.json` — ignoreリストから `test-data` を削除~~
+- **取り消し理由**: CF上でEvaluate/Ingestが74件×RAGでタイムアウト（540s超）。ローカル専用と割り切り、firebase.jsonのignoreに `test-data` を戻した
 
 ### Phase 2: 評価結果のFirestore保存
 - [x] `src/evaluate/reporter.py` — `save_report()` にFirestore書き込みを追加（ファイル保存も残す）
@@ -70,9 +70,19 @@ Evaluate / Ingest / History の全機能をFirebase Hosting + Cloud Functions上
 - [x] 😈 **DA批判レビュー** — 重大な問題なし
 
 ### Phase 3: デプロイ・E2E検証
-- [ ] Firebase再デプロイ（functions + hosting）
-- [ ] 🔬 **機械検証**: Firebase Hosting上で Tuning → Re-tune → History比較 の一連のフローが動作すること
-- [ ] 😈 **DA批判レビュー**
+- [x] Firebase再デプロイ（functions + hosting + firestore）
+- [x] 🔬 **機械検証**: History APIがFirestoreから結果を取得できること ✅
+- [x] 🔬 **機械検証**: ローカルで Evaluate → Firestoreに結果保存 → Hosting上のHistoryで閲覧 ✅
+- ⚠️ **制約事項**: Evaluate実行はCloud Functions上では74件×RAGでタイムアウト（540s超）。ローカル実行 → Firestore保存 → Hosting閲覧の運用
+- [x] 😈 **DA批判レビュー** — ベクトルインデックス削除問題を発見・記録
+
+### Phase 4: デプロイ手順書の作成
+- [x] `doc/spec/infra/development.md` のデプロイセクションを全面更新
+  - `.env` リネーム手順を明記
+  - `--force` 禁止の理由（ベクトルインデックス削除）を表で説明
+  - デプロイ後のベクトルインデックス確認手順と再作成コマンド
+  - ローカルとFirebaseの役割分担表を追加
+- [x] `doc/spec/infra/infrastructure.md` のDD-016関連記述を修正
 
 ## ログ
 
@@ -83,6 +93,12 @@ Evaluate / Ingest / History の全機能をFirebase Hosting + Cloud Functions上
 - PH3: デプロイ成功。ただし `firebase deploy --force` がベクトルインデックスを削除する問題を発見
   - 原因: firestore.indexes.jsonにベクトルインデックスは宣言型で管理できない（gcloud CLIのみ）
   - 対応: `--force` なしでデプロイするか、デプロイ後にベクトルインデックスを再作成する
+  - Evaluate実行はCloud Functions上では74件×RAGでタイムアウト（540s超）
+  - 運用: ローカルでEvaluate → Firestore保存 → Hosting上のHistoryで閲覧
+- 方針転換: test-dataのデプロイは取り消し（firebase.jsonのignoreにtest-dataを戻す）
+  - Evaluate/IngestはCF上ではタイムアウトするためローカル専用と割り切る
+  - 中途半端にCFで実行できても開発スピードが落ちるだけと判断
+  - 有効な変更: 評価結果のFirestore保存 + History APIのFirestore読み込みのみ残す
 
 ---
 
