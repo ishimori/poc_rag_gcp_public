@@ -109,6 +109,7 @@ export default function Logs() {
                   <tr>
                     <th>Timestamp</th>
                     <th>Query</th>
+                    <th>Engine</th>
                     <th>Collection</th>
                     <th>Time</th>
                     <th>No Answer</th>
@@ -123,6 +124,7 @@ export default function Logs() {
                     >
                       <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>{formatTimestamp(log.timestamp)}</td>
                       <td className="data-preview" style={{ maxWidth: 300 }}>{log.query.length > 40 ? log.query.slice(0, 40) + '…' : log.query}</td>
+                      <td style={{ fontSize: '0.75rem', fontWeight: 600, color: log.techniques?.use_vertex_ai_search ? '#1a73e8' : '#666' }}>{log.techniques?.use_vertex_ai_search ? 'Vertex' : '自前'}</td>
                       <td style={{ fontSize: '0.8rem', color: '#666' }}>{log.collection || '-'}</td>
                       <td style={{ textAlign: 'right' }}>{(log.elapsed_ms / 1000).toFixed(1)}s</td>
                       <td>{log.no_answer ? <span className="text-fail">Yes</span> : <span className="text-pass">No</span>}</td>

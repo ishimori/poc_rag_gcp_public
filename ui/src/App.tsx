@@ -198,6 +198,38 @@ export default function App() {
 
       <div className="main">
         <aside className="sidebar">
+          <h3>検索エンジン</h3>
+          <div className="engine-toggle">
+            <label className={`engine-option ${(techConfig['use_vertex_ai_search'] ?? true) ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="engine"
+                checked={techConfig['use_vertex_ai_search'] ?? true}
+                onChange={() => handleTechToggle('use_vertex_ai_search', true)}
+                disabled={loading}
+              />
+              <div className="engine-info">
+                <span className="engine-name">Vertex AI Search</span>
+                <span className="engine-desc">Google Cloud マネージド検索</span>
+              </div>
+            </label>
+            <label className={`engine-option ${!(techConfig['use_vertex_ai_search'] ?? true) ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="engine"
+                checked={!(techConfig['use_vertex_ai_search'] ?? true)}
+                onChange={() => handleTechToggle('use_vertex_ai_search', false)}
+                disabled={loading}
+              />
+              <div className="engine-info">
+                <span className="engine-name">自前RAG</span>
+                <span className="engine-desc">Firestore + 独自パイプライン</span>
+              </div>
+            </label>
+          </div>
+
+          <div className="sidebar-divider" />
+
           <h3>モデル選択</h3>
           <p className="sidebar-hint">入力 / 出力（per 1M tokens）</p>
           {MODELS.map((m) => (

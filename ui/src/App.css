@@ -87,6 +87,55 @@
   margin: 16px 0;
 }
 
+/* Engine Toggle */
+.engine-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.engine-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.engine-option:hover {
+  background: #f0f4ff;
+}
+
+.engine-option.selected {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.engine-option input[type="radio"] {
+  margin-top: 2px;
+}
+
+.engine-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.engine-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.engine-desc {
+  font-size: 0.72rem;
+  color: #666;
+}
+
 /* Welcome */
 .welcome {
   display: flex;

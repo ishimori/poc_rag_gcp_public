@@ -30,6 +30,7 @@ export interface ConfigParams {
   multi_query: boolean
   answerability_threshold: number
   contextual_retrieval: boolean
+  use_vertex_ai_search: boolean
 }
 
 export function getConfig(): Promise<ConfigParams> {
