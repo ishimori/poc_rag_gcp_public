@@ -73,6 +73,7 @@
 | ファイル | 説明 |
 |---------|------|
 | [local-operations.md](doc/guide/local-operations.md) | ローカル操作ガイド（evaluate/ingest/dev server の実行方法・ハマりポイント） |
+| [chunk-experiment.md](doc/guide/chunk-experiment.md) | チャンクサイズ実験ガイド（並列Ingest/Evaluate、インデックス作成手順） |
 
 ## プレゼン資料 (doc/presentation/)
 
