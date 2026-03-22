@@ -9,6 +9,14 @@
 | [README.md](README.md) | プロジェクト概要・セットアップ |
 | [CLAUDE.md](CLAUDE.md) | Claude Code 設定（DD/スキル/規約） |
 | [DOCUMENT-MAP.md](DOCUMENT-MAP.md) | 本ファイル |
+| [da-method.md](doc/da-method.md) | DA（Devil's Advocate）メソッド解説 |
+
+## テンプレート (doc/templates/)
+
+| ファイル | 説明 |
+|---------|------|
+| [dd_template.md](doc/templates/dd_template.md) | DD テンプレート |
+| [dd-basic-rules.md](doc/templates/dd-basic-rules.md) | DD 基本ルール |
 
 ## 仕様書 (doc/spec/)
 
@@ -67,6 +75,7 @@
 | [metadata-design.md](doc/research/cross-cutting/metadata-design.md) | メタデータ設計 |
 | [prompt-design.md](doc/research/cross-cutting/prompt-design.md) | プロンプト設計 |
 | [vertex-ai-search-comparison.md](doc/research/cross-cutting/vertex-ai-search-comparison.md) | 自前RAG vs Vertex AI Search 比較分析（次PoC判断材料） |
+| [vertext/](doc/research/cross-cutting/vertext/) | Gemini/GPT 応答比較リサーチ資料 |
 
 ## ガイド (doc/guide/)
 
@@ -82,6 +91,7 @@
 | フォルダ | 説明 |
 |---------|------|
 | [20260320/](doc/presentation/20260320/) | RAG技術13選プレゼン（00〜13 + images/） |
+| [20260322/](doc/presentation/20260322/) | PoC総括プレゼン（技術評価・Vertex比較・知見・次ステップ） |
 
 ## 実施記録 (doc/record/)
 

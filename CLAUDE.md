@@ -6,7 +6,7 @@
 
 ## DD設定
 
-- **フロー**: full（9ステップ）→ 詳細は `doc/development-flow-full.md`
+- **フロー**: full（9ステップ）
 - **DDフォルダ**: `doc/DD/`
 - **DD索引**: `doc/DD/INDEX.md` — DD作成・ステータス変更・アーカイブ時に必ず更新すること
 - **アーカイブ**: `doc/DD/archived/`
