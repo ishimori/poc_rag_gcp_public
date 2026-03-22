@@ -74,6 +74,16 @@ def _save_query_log(
                 "sources": [{"file": s.get("source_file", ""), "score": s.get("score", 0)} for s in sources],
                 "source_count": len(sources),
                 "no_answer": NO_ANSWER_MARKER in answer,
+                "collection": config.collection_name,
+                "techniques": {
+                    "hybrid_search": config.hybrid_search,
+                    "metadata_scoring": config.metadata_scoring,
+                    "clarification": config.clarification,
+                    "permission_filter": config.permission_filter,
+                    "shadow_retrieval": config.shadow_retrieval,
+                    "multi_query": config.multi_query,
+                    "contextual_retrieval": config.contextual_retrieval,
+                },
                 "timestamp": firestore.SERVER_TIMESTAMP,
             }
         )
@@ -219,17 +229,19 @@ def _handle_ingest_status(req: https_fn.Request) -> https_fn.Response:
     """GET /ingest/status — インジェスト進捗を返す"""
     from src.task_status import get_task_status
 
-    return _json_response(get_task_status("ingest"))
+    task_id = f"ingest:{config.collection_name}"
+    return _json_response(get_task_status(task_id))
 
 
 def _handle_ingest_cancel(req: https_fn.Request) -> https_fn.Response:
     """POST /ingest/cancel — インジェストを中止する"""
     from src.task_status import get_task_status, update_task_status
 
-    status = get_task_status("ingest")
+    task_id = f"ingest:{config.collection_name}"
+    status = get_task_status(task_id)
     if not status.get("running"):
         return _json_response({"cancelled": False, "reason": "not running"})
-    update_task_status("ingest", cancel=True)
+    update_task_status(task_id, cancel=True)
     return _json_response({"cancelled": True})
 
 
@@ -261,9 +273,10 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
     files.sort()
 
     # 進捗初期化
+    ingest_task_id = f"ingest:{config.collection_name}"
     start_time = time.time()
     update_task_status(
-        "ingest",
+        ingest_task_id,
         running=True,
         cancel=False,
         current=0,
@@ -271,6 +284,7 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
         current_file="",
         elapsed=0.0,
         estimated_remaining=0.0,
+        collection=config.collection_name,
     )
 
     total_chunks = 0
@@ -281,11 +295,11 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
 
     try:
         for i, (file_name, file_path) in enumerate(files):
-            if check_cancel("ingest"):
+            if check_cancel(ingest_task_id):
                 cancelled = True
                 break
 
-            update_task_status("ingest", current_file=file_name)
+            update_task_status(ingest_task_id, current_file=file_name)
 
             with open(file_path, encoding="utf-8") as f:
                 text = f.read()
@@ -311,13 +325,13 @@ def _handle_ingest(req: https_fn.Request) -> https_fn.Response:
             done = i + 1
             avg = elapsed / done
             update_task_status(
-                "ingest",
+                ingest_task_id,
                 current=done,
                 elapsed=round(elapsed, 1),
                 estimated_remaining=round(avg * (len(files) - done), 1),
             )
     finally:
-        clear_task_status("ingest")
+        clear_task_status(ingest_task_id)
 
     return _json_response(
         {
@@ -367,11 +381,12 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
         )
 
     # 進捗初期化
+    eval_task_id = f"evaluate:{config.collection_name}"
     start_time = time.time()
     active_count = 0
     eval_results_list: list[dict] = []
     update_task_status(
-        "evaluate",
+        eval_task_id,
         running=True,
         cancel=False,
         current=0,
@@ -380,10 +395,11 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
         elapsed=0.0,
         estimated_remaining=0.0,
         results=[],
+        collection=config.collection_name,
     )
 
     def _should_cancel() -> bool:
-        return check_cancel("evaluate")
+        return check_cancel(eval_task_id)
 
     def _on_progress(current: int, total: int, result) -> None:
         nonlocal active_count
@@ -405,7 +421,7 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
             }
         )
         update_task_status(
-            "evaluate",
+            eval_task_id,
             current=current,
             total=total,
             current_id=result.id,
@@ -417,7 +433,7 @@ def _handle_evaluate(req: https_fn.Request) -> https_fn.Response:
     try:
         results = run_evaluation(cases, on_progress=_on_progress, should_cancel=_should_cancel)
     finally:
-        clear_task_status("evaluate")
+        clear_task_status(eval_task_id)
 
     report = generate_report(results)
     file_path = save_report(report)
@@ -434,17 +450,19 @@ def _handle_evaluate_status(req: https_fn.Request) -> https_fn.Response:
     """GET /evaluate/status — 評価進捗を返す"""
     from src.task_status import get_task_status
 
-    return _json_response(get_task_status("evaluate"))
+    eval_task_id = f"evaluate:{config.collection_name}"
+    return _json_response(get_task_status(eval_task_id))
 
 
 def _handle_evaluate_cancel(req: https_fn.Request) -> https_fn.Response:
     """POST /evaluate/cancel — 評価を中止する"""
     from src.task_status import get_task_status, update_task_status
 
-    status = get_task_status("evaluate")
+    eval_task_id = f"evaluate:{config.collection_name}"
+    status = get_task_status(eval_task_id)
     if not status.get("running"):
         return _json_response({"cancelled": False, "reason": "not running"})
-    update_task_status("evaluate", cancel=True)
+    update_task_status(eval_task_id, cancel=True)
     return _json_response({"cancelled": True})
 
 
