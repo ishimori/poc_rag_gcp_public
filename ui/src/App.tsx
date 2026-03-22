@@ -120,6 +120,10 @@ export default function App() {
             boolKeys[t.configKey] = Boolean(data[t.configKey])
           }
         }
+        // 検索エンジン切替もtechConfigに含める
+        if ('use_vertex_ai_search' in data) {
+          boolKeys['use_vertex_ai_search'] = Boolean(data['use_vertex_ai_search'])
+        }
         setTechConfig(boolKeys)
       })
       .catch(() => {})
