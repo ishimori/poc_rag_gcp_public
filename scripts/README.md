@@ -51,15 +51,38 @@ uv run python scripts/ingest.py --clear  # 全削除してから再投入
 
 前提: `.env.local` に `GOOGLE_CLOUD_PROJECT` を設定済みであること。
 
-### evaluate.py — 評価パイプライン実行
+### evaluate.py — 評価パイプライン実行（順次版）
 
 `test-data/golden/eval_dataset.jsonl` を使ってRAGの精度を評価し、スコアレポートを出力する。
 
 ```bash
 uv run python scripts/evaluate.py
+uv run python scripts/evaluate.py --collection chunks_1200    # コレクション指定
+uv run python scripts/evaluate.py --limit 10                  # 先頭10件だけ
 ```
 
 結果は `results/` ディレクトリと Firestore（`eval_results` コレクション）に保存される。
+
+### evaluate_parallel.py — 評価パイプライン実行（並列版・推奨）
+
+`evaluate.py` と同じ結果を出力するが、テストケースを複数同時実行して高速化する。**通常はこちらを使用する。**
+
+```bash
+uv run python scripts/evaluate_parallel.py                              # デフォルト5並列
+uv run python scripts/evaluate_parallel.py --collection chunks_1200     # コレクション指定
+uv run python scripts/evaluate_parallel.py --workers 3                  # 並列数指定
+uv run python scripts/evaluate_parallel.py --limit 10                   # 先頭10件だけ
+```
+
+### run_experiment.py — Ingest → Evaluate 一括実行
+
+1つのコレクションに対して Ingest → Evaluate を順次実行するラッパー。複数コレクションを `&` で並列起動できる。
+
+```bash
+uv run python scripts/run_experiment.py --chunk-size 1200 --collection chunks_1200
+uv run python scripts/run_experiment.py --collection chunks_1200 --evaluate-only   # Evaluateのみ
+uv run python scripts/run_experiment.py --chunk-size 1200 --collection chunks_1200 --ingest-only  # Ingestのみ
+```
 
 ### fetch_wikipedia.py — Wikipedia 記事取得
 
