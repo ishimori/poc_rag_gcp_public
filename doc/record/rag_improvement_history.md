@@ -85,6 +85,10 @@ timeline
 | 6 | DD-019-14完了 | — | — | 4段階バグ修正: chunker YAML解析, keyword権限フィルタ, Shadow Retrieval差分判定, runner.py user_groups. security 0%→80%(ピンポイント). フル評価はDD-022に委任 | — |
 | V-A | Vertex素（制御層OFF） | **84.4%** (54/64) | — | Vertex AI Search をRetrieverとして差し込み。チューニングなし・チャンク最適化なし | `eval_vertex_patternA_20260322_114232.json` |
 | V-B | Vertex+制御層 | **83.8%** (62/74) | — | Vertex + clarification/shadow/metadata ON。clarification誤判定で一部悪化 | `eval_vertex_patternB_20260322_115335.json` |
+| 3F-600 | 自前RAG chunk=600 × 3 Flash | **77.0%** (57/74) | — | Gemini 3 Flash Preview | `eval_self_chunks600_3flash_20260322_135152.json` |
+| 3F-800 | 自前RAG chunk=800 × 3 Flash | **77.0%** (57/74) | — | Gemini 3 Flash Preview | `eval_self_chunks800_3flash_20260322_135051.json` |
+| 3F-1200 | 自前RAG chunk=1200 × 3 Flash | **75.7%** (56/74) | — | Gemini 3 Flash Preview | `eval_self_chunks1200_3flash_20260322_134851.json` |
+| 3F-V | Vertex × 3 Flash | **79.7%** (59/74) | — | Vertex AI Search + Gemini 3 Flash Preview | `eval_vertex_3flash_20260322_141719.json` |
 
 ---
 

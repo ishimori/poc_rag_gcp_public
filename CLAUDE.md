@@ -24,6 +24,14 @@
 - DA メソッド: `doc/da-method.md`
 - `/setup パス` - 外部プロジェクトへDD導入
 
+## GCPコスト運用ルール
+
+- **evaluate.py のフル評価（74件）は高額**（1回あたり Gemini API ≒ ¥200〜300）。必ず `--limit 5` 等で部分検証してから実行すること
+- フル評価はモデル・設定が確定してからまとめて1回が原則
+- Ingest（Embedding生成）も同様に高額。チャンクサイズ実験で複数コレクション作成する場合はコストを意識すること
+- 予算アラート: `poc-rag-490804` に ¥3,000/月（80%, 100%閾値）。Gemini API は別プロジェクト（gen-lang-client）で課金されるためアラート対象外
+- コスト状況の詳細 → [doc/guide/cost-report.md](doc/guide/cost-report.md)
+
 ## コーディング規約
 
 - Python: 型ヒント使用、`from __future__ import annotations`

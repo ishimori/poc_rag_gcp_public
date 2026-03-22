@@ -269,6 +269,26 @@ search_engine.search(query, ...)  # 内部実装を Firestore / Vertex で切替
 3. **securityは両者とも課題** — 自前は20%（バグ修正で80%まで改善中）、Vertexは権限フィルタ未設定で40%。どちらも制御層の設計が必要
 4. **本当に重要な知見**: Vertex素でここまで出るのは、裏を返せば「検索エンジンの性能差はOverallに大きく影響しない」ことの証拠。精度を決めるのは検索エンジンではなく制御層の設計
 
+## Gemini 3 Flash での再評価（2026-03-22 DD-025）
+
+回答生成モデルを Gemini 2.5 Flash → Gemini 3 Flash Preview に切り替えて再評価した。LLM-as-Judge は 2.5 Flash 据え置き。
+
+### 結果
+
+| 構成 | 2.5 Flash | 3 Flash | 差分 |
+|------|:-:|:-:|:-:|
+| 自前RAG (chunk=600) | — | **77.0%** | — |
+| 自前RAG (chunk=800) | 81.1% | **77.0%** | -4.1pt |
+| 自前RAG (chunk=1200) | 85.1% | **75.7%** | -9.4pt |
+| Vertex AI Search | 84.4% | **79.7%** | -4.7pt |
+
+### 考察
+
+1. **3 Flash は全パターンで 2.5 Flash より低下** — clarifier 誤判定や Shadow Retrieval 誤発動が主な悪化要因。原因がプロンプトの問題かモデルの特性変化かは未特定
+2. **clarifier の誤発動が主因** — 「パスワードの条件は？」「新しいソフトを入れたい」を曖昧と判定するケースが増加
+3. **Vertex × 3 Flash でも noise_resistance が改善（50%→83.3%）** — DD-024-3 の Wikipedia ペナルティ効果が確認できた
+4. **LLMモデルの世代向上が精度に直結しない** — 2.5 Flash → 3 Flash でモデル性能は上がっているはずだが、RAG全体のスコアは低下した。LLMの基礎能力は既にRAGタスクに十分な水準に達しており、精度のボトルネックはモデル性能ではなく検索精度や制御層の設計にある可能性が高い
+
 ## 参考資料
 
 - [Vertex AI Search - 検索チューニング](https://docs.cloud.google.com/generative-ai-app-builder/docs/tune-search?hl=en)
