@@ -100,6 +100,7 @@ gcloud firestore indexes composite list --project=poc-rag-490804 --database="(de
 | **デプロイ後にベクトルインデックスを確認** | 万が一削除された場合は再作成（5〜10分かかる）: `gcloud firestore indexes composite create --project=poc-rag-490804 --collection-group=chunks --query-scope=COLLECTION --field-config='vector-config={"dimension":"768","flat": "{}"},field-path=embedding'` |
 | `test-data/`、`results/` はデプロイ対象外 | `firebase.json` の ignore で除外。Evaluate/Ingest はローカル専用 |
 | パラメータ変更（`PUT /config`）はランタイムのみ | 再デプロイで初期値に戻る |
+| **`use_vertex_ai_search` はデフォルト `False` にすること** | `True` のままデプロイすると、本番に `.env.local` がないため `VERTEX_SEARCH_ENGINE_ID` が空 → 500エラー。Vertex AI Search を本番有効化する場合は Cloud Functions の環境変数に `VERTEX_SEARCH_ENGINE_ID` と `VERTEX_SEARCH_DATA_STORE_ID` を設定する必要がある |
 
 ### ローカルとFirebaseの役割分担
 
