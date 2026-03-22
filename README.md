@@ -2,12 +2,39 @@
 
 社内ドキュメントに基づいてAIが質問に回答するRAG（Retrieval-Augmented Generation）チャットシステムと、精度チューニングのための管理画面を提供するPoCプロジェクト。
 
+## PoCの成果
+
+| 指標 | 値 |
+|------|----|
+| 最終スコア（自前RAG、Gemini 3 Flash） | **77.0%** (57/74) |
+| 最終スコア（Vertex AI Search、チューニングなし） | **84.4%** (54/64) |
+| ベースライン | 28.4% (21/74) |
+| 実装技術数 | 13技術 |
+| テストケース数 | 74件 × 12カテゴリ |
+
+精度改善の詳細な記録は [doc/record/rag_improvement_history.md](doc/record/rag_improvement_history.md) を参照。
+
+### 実装した主要技術
+
+- **検索**: ハイブリッド検索（ベクトル + キーワード）、メタデータスコアリング、Vertex AI Ranker（リランキング）
+- **前処理**: Contextual Retrieval、AIフィルタ自動生成、曖昧判定・聞き返し
+- **権限**: 権限フィルタ（allowed_groups）、Shadow Retrieval（権限除外検出）
+
+### 次フェーズに向けて
+
+本 PoC はサンプルデータ（61ファイル / 74件の評価セット）を用いた技術検証フェーズとして完了。
+**次フェーズでは本番相当データに切り替え、本 PoC の知見（技術スタック・チューニング手法・評価基盤）をそのまま活用して再度実施する予定。**
+
+検索基盤の選定（自前RAG vs Vertex AI Search）については [doc/research/cross-cutting/vertex-ai-search-comparison.md](doc/research/cross-cutting/vertex-ai-search-comparison.md) を参照。
+
+---
+
 ## 技術スタック
 
 - **フロントエンド**: React 19 + TypeScript + Vite（`ui/`）
 - **バックエンド**: Python 3.12 + Cloud Functions Gen2（`main.py`, `src/`）
 - **データベース**: Firestore（ベクトルDB兼ドキュメントストア）
-- **AI/ML**: Vertex AI Gemini 2.5（LLM）+ text-embedding-005（768次元）+ Discovery Engine（リランキング）
+- **AI/ML**: Vertex AI Gemini 3 Flash（LLM）+ text-embedding-005（768次元）+ Discovery Engine（リランキング）
 - **インフラ**: Firebase Hosting + Cloud Functions / GCP asia-northeast1
 
 ## ディレクトリ構成
@@ -58,14 +85,12 @@ bash scripts/dev.sh stop   # 停止
 
 - 自動評価パイプライン: `test-data/golden/eval_dataset.jsonl`（74件 × 12パターン）
 - ハイブリッドスコアリング: LLM-as-Judge（主判定）+ キーワードマッチ（参考値）
-- 未実装機能テスト（ambiguous/security）は `requires` フィールドで自動除外
-- 現在のベースライン: 21/64 (32.8%)
-- 管理画面（`/admin/tuning`）から Ingest → Evaluate → スコア比較のサイクルを実行可能
+- Operations Monitor（`/admin/tuning`）から Ingest → Evaluate → スコア比較のサイクルを実行可能
 
 ## セキュリティ
 
 - PoCフェーズのため認証なし
-- `security_level` / `allowed_groups` フィールドは chunks に存在するがフィルタ未実装
+- `security_level` / `allowed_groups` による権限フィルタ実装済み（80%達成）
 
 ## ドキュメント
 
