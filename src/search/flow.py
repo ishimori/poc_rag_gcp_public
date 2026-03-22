@@ -70,8 +70,12 @@ def rag_flow(
 
     # Step 1.5: 権限除外検出（Shadow Retrieval）
     # フィルタなし検索を実行し、フィルタあり検索との差分で権限除外を検出する
+    # ※ メイン検索と同じ検索方式で比較する（hybrid同士 or vector同士）
     if config.shadow_retrieval and config.permission_filter and user_groups:
-        shadow_results = vector_search(query, user_groups=None)
+        if config.hybrid_search:
+            shadow_results = hybrid_search(query, user_groups=None)
+        else:
+            shadow_results = vector_search(query, user_groups=None)
         # フィルタなし/ありで source_file の差分を比較
         filtered_sources = {r.source_file for r in search_results}
         shadow_sources = {r.source_file for r in shadow_results}

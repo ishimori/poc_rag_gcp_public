@@ -45,8 +45,8 @@ export default function Tuning() {
     getTasks()
       .then((res) => {
         if (active) {
-          setIngestTasks(res.tasks.filter((t) => t.task_id.startsWith('ingest:')))
-          setEvalTasks(res.tasks.filter((t) => t.task_id.startsWith('evaluate:')))
+          setIngestTasks(res.tasks.filter((t) => t.task_id.startsWith('ingest:') && t.running))
+          setEvalTasks(res.tasks.filter((t) => t.task_id.startsWith('evaluate:') && t.running))
         }
       })
       .catch(() => {})
@@ -58,8 +58,8 @@ export default function Tuning() {
     pollRef.current = setInterval(() => {
       getTasks()
         .then((res) => {
-          setIngestTasks(res.tasks.filter((t) => t.task_id.startsWith('ingest:')))
-          setEvalTasks(res.tasks.filter((t) => t.task_id.startsWith('evaluate:')))
+          setIngestTasks(res.tasks.filter((t) => t.task_id.startsWith('ingest:') && t.running))
+          setEvalTasks(res.tasks.filter((t) => t.task_id.startsWith('evaluate:') && t.running))
         })
         .catch(() => {})
     }, 2000)
