@@ -49,6 +49,22 @@ def clear_task_status(task_id: str) -> None:
     )
 
 
+def list_tasks(prefix: str = "") -> list[dict]:
+    """タスク一覧を取得する。prefixでフィルタ（例: "ingest_", "evaluate_"）"""
+    db = _get_db()
+    docs = db.collection(_COLLECTION).stream()
+    results = []
+    for doc in docs:
+        if prefix and not doc.id.startswith(prefix):
+            continue
+        data = doc.to_dict() or {}
+        data["task_id"] = doc.id
+        if "updated_at" in data and data["updated_at"] is not None:
+            data["updated_at"] = data["updated_at"].isoformat()
+        results.append(data)
+    return results
+
+
 def check_cancel(task_id: str) -> bool:
     """中止リクエストが出ているか確認する"""
     doc = _get_db().collection(_COLLECTION).document(task_id).get()

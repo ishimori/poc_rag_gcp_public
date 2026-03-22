@@ -180,6 +180,12 @@ def admin(req: https_fn.Request) -> https_fn.Response:
         return _handle_chunks(req)
     if path == "/logs" and method == "GET":
         return _handle_logs(req)
+    if path == "/collections" and method == "GET":
+        return _handle_collections(req)
+    if path == "/collections/active" and method == "PUT":
+        return _handle_collections_switch(req)
+    if path == "/tasks" and method == "GET":
+        return _handle_tasks(req)
 
     return _error(f"Not found: {method} {path}", 404)
 
@@ -666,3 +672,52 @@ def _handle_logs(req: https_fn.Request) -> https_fn.Response:
             "count": len(logs),
         }
     )
+
+
+# --- Collections ---
+
+
+def _handle_collections(req: https_fn.Request) -> https_fn.Response:
+    """GET /collections — chunks_* コレクション一覧を返す"""
+    db = _get_firestore_client()
+    collections = []
+    for coll_ref in db.collections():
+        name = coll_ref.id
+        if not name.startswith("chunks"):
+            continue
+        # ドキュメント数を取得（count_documents は Firestore の集約クエリ）
+        try:
+            count = sum(1 for _ in coll_ref.select([]).limit(10000).stream())
+        except Exception:
+            count = 0
+        collections.append(
+            {
+                "name": name,
+                "count": count,
+                "active": name == config.collection_name,
+            }
+        )
+    collections.sort(key=lambda c: c["name"])
+    return _json_response({"collections": collections, "current": config.collection_name})
+
+
+def _handle_collections_switch(req: https_fn.Request) -> https_fn.Response:
+    """PUT /collections/switch — 検索対象コレクションを切り替える"""
+    body = req.get_json(force=True, silent=True) or {}
+    name = body.get("name", "")
+    if not name:
+        return _error("name is required", 400)
+    config.collection_name = name
+    return _json_response({"switched_to": name})
+
+
+# --- Tasks ---
+
+
+def _handle_tasks(req: https_fn.Request) -> https_fn.Response:
+    """GET /tasks — 実行中のタスク一覧を返す（ingest_*, evaluate_*）"""
+    from src.task_status import list_tasks
+
+    prefix = req.args.get("prefix", "")
+    tasks = list_tasks(prefix)
+    return _json_response({"tasks": tasks})

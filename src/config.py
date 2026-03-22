@@ -11,7 +11,7 @@ class Config:
     location: str = os.environ.get("GOOGLE_CLOUD_LOCATION", "asia-northeast1")
 
     # Firestore
-    collection_name: str = "chunks"
+    collection_name: str = os.environ.get("COLLECTION_NAME", "chunks")
 
     # Chunking
     chunk_size: int = 800
