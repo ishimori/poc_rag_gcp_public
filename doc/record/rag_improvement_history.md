@@ -3,7 +3,7 @@
 > DD-019 シリーズで実施した全施策の時系列記録。
 > 何を変えて、何が起きて、スコアがどう動いたかを、失敗・勘違いも含めて記録する。
 >
-> **最終更新: 2026-03-22 20:00（DD-019-14 security 4段階バグ修正完了時点）**
+> **最終更新: 2026-03-22 21:00（DD-024 Vertex AI Search 比較検証追記）**
 
 ## 変更の4軸
 
@@ -83,6 +83,8 @@ timeline
 | 5 | DD-019-10/13適用 | **81.1%** (60/74) | ±0pt | 権限即拒否, 曖昧判定安定化（Multi-Query OFF） | `eval_20260322_080611.json` |
 | — | DD-019-9 chunk=1200 | **85.1%** | — | チャンクサイズ1200実験（DD-019-10~13も同時適用） | `DD-019-9/result_B_chunk1200.json` |
 | 6 | DD-019-14完了 | — | — | 4段階バグ修正: chunker YAML解析, keyword権限フィルタ, Shadow Retrieval差分判定, runner.py user_groups. security 0%→80%(ピンポイント). フル評価はDD-022に委任 | — |
+| V-A | Vertex素（制御層OFF） | **84.4%** (54/64) | — | Vertex AI Search をRetrieverとして差し込み。チューニングなし・チャンク最適化なし | `eval_vertex_patternA_20260322_114232.json` |
+| V-B | Vertex+制御層 | **83.8%** (62/74) | — | Vertex + clarification/shadow/metadata ON。clarification誤判定で一部悪化 | `eval_vertex_patternB_20260322_115335.json` |
 
 ---
 
@@ -295,6 +297,30 @@ timeline
 | multi_query | **false** | 精度悪化のためOFF |
 | answerability_threshold | 0.0 | 未チューニング |
 | contextual_retrieval | true | |
+
+---
+
+## Vertex AI Search 比較検証（DD-024）
+
+同一の評価データセット（74件×12カテゴリ）で自前RAGとVertex AI Searchを直接比較した。
+
+| カテゴリ | 自前RAG (85.1%) | Vertex素 (A) | Vertex+制御層 (B) |
+|---------|:-:|:-:|:-:|
+| **Overall** | **85.1%** | **84.4%** | **83.8%** |
+| exact_match | 88% | **100%** | **100%** |
+| similar_number | **100%** | 83.3% | 83.3% |
+| semantic | 50% | **66.7%** | 58.3% |
+| step_sequence | **100%** | **100%** | **100%** |
+| multi_chunk | **100%** | 85.7% | 85.7% |
+| unanswerable | **100%** | **100%** | **100%** |
+| ambiguous | **100%** | (skip) | **100%** |
+| cross_category | **100%** | **100%** | **100%** |
+| security | 20% | (skip) | 40.0% |
+| noise_resistance | 67% | 50.0% | 66.7% |
+| table_extract | **100%** | 80.0% | **100%** |
+| temporal | 67% | **100%** | **100%** |
+
+**知見**: Vertex素で84.4%はチューニングなしとしては驚異的。検索基盤の性能差はOverallに大きく影響せず、精度を決めるのは制御層の設計。
 
 ---
 
