@@ -26,7 +26,7 @@ def _get_model(model_name: str | None = None) -> GenerativeModel:
     if name not in _models:
         _models[name] = GenerativeModel(
             name,
-            generation_config={"temperature": 0.1, "max_output_tokens": 2048},
+            generation_config={"temperature": 0.1, "max_output_tokens": 8192},
         )
     return _models[name]
 
