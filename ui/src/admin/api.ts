@@ -180,6 +180,7 @@ export interface QueryLog {
   sources: (string | { file: string; score: number })[]
   source_count: number
   no_answer: boolean
+  techniques?: Record<string, boolean>
   timestamp: string | null
 }
 

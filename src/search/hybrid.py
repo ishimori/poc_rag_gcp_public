@@ -66,7 +66,7 @@ def hybrid_search(
     all_keyword: list[SearchResult] = []
     for q in queries:
         all_vector.extend(vector_search(q, top_k=k, user_groups=user_groups))
-        all_keyword.extend(keyword_search(q, top_k=k))
+        all_keyword.extend(keyword_search(q, top_k=k, user_groups=user_groups))
 
     # RRF統合
     merged = _merge_by_rrf(all_vector, all_keyword, config.rrf_k)

@@ -147,6 +147,18 @@ export default function Logs() {
                   <tr><td>No Answer</td><td>{selected.no_answer ? 'Yes' : 'No'}</td></tr>
                 </tbody>
               </table>
+              {selected.techniques && (
+                <>
+                  <h3 style={{ marginBottom: 4 }}>Techniques</h3>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 8px', marginBottom: 12 }}>
+                    {Object.entries(selected.techniques).map(([key, on]) => (
+                      <span key={key} style={{ fontSize: '0.8rem', opacity: on ? 1 : 0.4 }}>
+                        {on ? '✓' : '✗'} {key}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
               <h3 style={{ marginBottom: 4 }}>Sources ({selected.source_count})</h3>
               <table className="admin-table" style={{ marginBottom: 12 }}>
                 <thead>

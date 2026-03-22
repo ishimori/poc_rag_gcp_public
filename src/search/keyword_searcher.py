@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from google.cloud import firestore
 
@@ -19,38 +19,52 @@ def _get_db() -> firestore.Client:
     return _db
 
 
-def _fetch_all_chunks() -> list[SearchResult]:
-    """Firestoreから全チャンクを取得しキャッシュする"""
-    global _chunk_cache
-    if _chunk_cache is not None:
-        return _chunk_cache
+@dataclass
+class _CachedChunk:
+    """キーワード検索用のキャッシュチャンク（allowed_groups を含む）"""
+
+    result: SearchResult
+    allowed_groups: list[str]
+
+
+_chunk_cache_v2: list[_CachedChunk] | None = None
+
+
+def _fetch_all_chunks_v2() -> list[_CachedChunk]:
+    """Firestoreから全チャンクを取得しキャッシュする（allowed_groups 付き）"""
+    global _chunk_cache_v2
+    if _chunk_cache_v2 is not None:
+        return _chunk_cache_v2
 
     db = _get_db()
     collection = db.collection(config.collection_name)
 
-    chunks: list[SearchResult] = []
+    chunks: list[_CachedChunk] = []
     for doc in collection.stream():
         data = doc.to_dict()
         chunks.append(
-            SearchResult(
-                content=data["content"],
-                score=0.0,
-                source_file=data["source_file"],
-                chunk_index=data["chunk_index"],
-                category=data.get("category", "general"),
-                security_level=data.get("security_level", "public"),
+            _CachedChunk(
+                result=SearchResult(
+                    content=data["content"],
+                    score=0.0,
+                    source_file=data["source_file"],
+                    chunk_index=data["chunk_index"],
+                    category=data.get("category", "general"),
+                    security_level=data.get("security_level", "public"),
+                ),
+                allowed_groups=data.get("allowed_groups", ["all"]),
             )
         )
 
-    _chunk_cache = chunks
+    _chunk_cache_v2 = chunks
     print(f"  [KeywordSearch] cached {len(chunks)} chunks from Firestore")
-    return _chunk_cache
+    return _chunk_cache_v2
 
 
 def invalidate_chunk_cache() -> None:
     """キャッシュを破棄する（Ingest後に呼び出す）"""
-    global _chunk_cache
-    _chunk_cache = None
+    global _chunk_cache_v2
+    _chunk_cache_v2 = None
 
 
 def _extract_identifiers(query: str) -> list[str]:
@@ -114,21 +128,35 @@ def _score_chunk(identifiers: list[str], keywords: list[str], content: str) -> f
     return score
 
 
-def keyword_search(query: str, top_k: int | None = None) -> list[SearchResult]:
-    """識別子 + 一般語キーワード検索"""
+def _is_permitted(allowed_groups: list[str], user_groups: list[str] | None) -> bool:
+    """チャンクにアクセス権限があるか判定する"""
+    if not config.permission_filter or not user_groups:
+        return True
+    return any(g in allowed_groups for g in user_groups)
+
+
+def keyword_search(
+    query: str,
+    top_k: int | None = None,
+    user_groups: list[str] | None = None,
+) -> list[SearchResult]:
+    """識別子 + 一般語キーワード検索（権限フィルタ付き）"""
     identifiers = _extract_identifiers(query)
     keywords = _extract_keywords(query)
     if not identifiers and not keywords:
         return []
 
     k = top_k or config.top_k
-    all_chunks = _fetch_all_chunks()
+    all_chunks = _fetch_all_chunks_v2()
 
     scored: list[tuple[float, int, SearchResult]] = []
-    for i, chunk in enumerate(all_chunks):
-        s = _score_chunk(identifiers, keywords, chunk.content)
+    for i, cached in enumerate(all_chunks):
+        # 権限フィルタ: ベクトル検索の Pre-filtering と同等
+        if not _is_permitted(cached.allowed_groups, user_groups):
+            continue
+        s = _score_chunk(identifiers, keywords, cached.result.content)
         if s > 0:
-            scored.append((s, i, replace(chunk, score=s)))
+            scored.append((s, i, replace(cached.result, score=s)))
 
     # スコア降順でソート
     scored.sort(key=lambda x: -x[0])
