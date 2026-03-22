@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import vertexai
-from vertexai.generative_models import GenerativeModel
+from google import genai
+from google.genai.types import GenerateContentConfig
 
 from src.config import config
 from src.search.clarifier import detect_ambiguity
@@ -12,23 +12,18 @@ from src.search.metadata_scorer import apply_metadata_scores
 from src.search.reranker import rerank
 from src.search.retriever import SearchResult, vector_search
 
-_models: dict[str, GenerativeModel] = {}
-_vertexai_initialized = False
+_genai_client: genai.Client | None = None
 
 
-def _get_model(model_name: str | None = None) -> GenerativeModel:
-    global _vertexai_initialized
-    if not _vertexai_initialized:
-        vertexai.init(project=config.project_id or None, location=config.location)
-        _vertexai_initialized = True
-
-    name = model_name or config.llm_model
-    if name not in _models:
-        _models[name] = GenerativeModel(
-            name,
-            generation_config={"temperature": 0.1, "max_output_tokens": 8192},
+def _get_genai_client() -> genai.Client:
+    global _genai_client
+    if _genai_client is None:
+        _genai_client = genai.Client(
+            vertexai=True,
+            project=config.project_id or None,
+            location=config.llm_location,
         )
-    return _models[name]
+    return _genai_client
 
 
 @dataclass
@@ -129,9 +124,7 @@ def rag_flow(
 
 def _generate_answer(query: str, context: str, model_name: str | None = None) -> str:
     """Vertex AI Gemini で回答を生成する"""
-    model = _get_model(model_name)
-
-    permission_hint = ""
+    name = model_name or config.llm_model
 
     prompt = f"""あなたは社内ドキュメントに基づいて質問に回答するアシスタントです。
 
@@ -139,7 +132,6 @@ def _generate_answer(query: str, context: str, model_name: str | None = None) ->
 コンテキストに情報がない場合は「提供された情報には記載がありません」と回答してください。
 推測や外部知識は使わないでください。
 同じ文書の複数バージョン（例: 2024年版と2026年版）がある場合は、最新版の情報を優先して回答してください。
-{permission_hint}
 
 ## コンテキスト
 {context}
@@ -148,9 +140,14 @@ def _generate_answer(query: str, context: str, model_name: str | None = None) ->
 {query}"""
 
     try:
-        response = model.generate_content(prompt)
-        if response.candidates and response.candidates[0].content.parts:
-            return response.candidates[0].content.parts[0].text
+        client = _get_genai_client()
+        response = client.models.generate_content(
+            model=name,
+            contents=prompt,
+            config=GenerateContentConfig(temperature=0.1, max_output_tokens=8192),
+        )
+        if response.text:
+            return response.text
         print("  LLM returned empty response")
         return "回答を生成できませんでした。"
     except Exception as e:

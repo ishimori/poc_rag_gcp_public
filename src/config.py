@@ -44,7 +44,8 @@ class Config:
     multi_query_count: int = 3  # 展開するクエリ数（original + N）
 
     # LLM
-    llm_model: str = "gemini-2.5-flash"
+    llm_model: str = "gemini-3-flash-preview"
+    llm_location: str = os.environ.get("LLM_LOCATION", "global")  # Gemini 3系はglobalのみ
 
     # Clarification
     clarification: bool = True

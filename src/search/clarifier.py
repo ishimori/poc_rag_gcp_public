@@ -5,13 +5,24 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, HarmBlockThreshold, HarmCategory
+from google import genai
+from google.genai.types import GenerateContentConfig
 
 from src.config import config
 
-_model: GenerativeModel | None = None
-_vertexai_initialized = False
+_genai_client: genai.Client | None = None
+
+
+def _get_genai_client() -> genai.Client:
+    global _genai_client
+    if _genai_client is None:
+        _genai_client = genai.Client(
+            vertexai=True,
+            project=config.project_id or None,
+            location=config.llm_location,
+        )
+    return _genai_client
+
 
 _CLARIFICATION_PROMPT = """\
 あなたは社内ドキュメント検索システムの入力判定器です。
@@ -57,23 +68,7 @@ _CLARIFICATION_PROMPT = """\
 {query}"""
 
 
-def _get_model() -> GenerativeModel:
-    global _model, _vertexai_initialized
-    if not _vertexai_initialized:
-        vertexai.init(project=config.project_id or None, location=config.location)
-        _vertexai_initialized = True
-    if _model is None:
-        _model = GenerativeModel(
-            "gemini-2.5-flash",
-            generation_config={"temperature": 0.0, "max_output_tokens": 2048},
-            safety_settings={
-                HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-            },
-        )
-    return _model
+_GENAI_CONFIG = GenerateContentConfig(temperature=0.0, max_output_tokens=2048)
 
 
 @dataclass
@@ -85,14 +80,18 @@ class ClarificationResult:
 def detect_ambiguity(query: str) -> ClarificationResult:
     """クエリが曖昧かどうかを判定し、曖昧な場合は聞き返し文を生成する"""
     try:
-        model = _get_model()
+        client = _get_genai_client()
         prompt = _CLARIFICATION_PROMPT.format(query=query)
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=config.llm_model,
+            contents=prompt,
+            config=_GENAI_CONFIG,
+        )
 
-        if not (response.candidates and response.candidates[0].content.parts):
+        if not response.text:
             return ClarificationResult(is_ambiguous=False, clarification_question="")
 
-        raw = response.candidates[0].content.parts[0].text.strip()
+        raw = response.text.strip()
 
         # JSON部分を抽出
         start = raw.find("{")
