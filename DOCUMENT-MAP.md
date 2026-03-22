@@ -66,6 +66,7 @@
 | [firestore-schema.md](doc/research/cross-cutting/firestore-schema.md) | Firestoreスキーマ設計 |
 | [metadata-design.md](doc/research/cross-cutting/metadata-design.md) | メタデータ設計 |
 | [prompt-design.md](doc/research/cross-cutting/prompt-design.md) | プロンプト設計 |
+| [vertex-ai-search-comparison.md](doc/research/cross-cutting/vertex-ai-search-comparison.md) | 自前RAG vs Vertex AI Search 比較分析（次PoC判断材料） |
 
 ## ガイド (doc/guide/)
 
