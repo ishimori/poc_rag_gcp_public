@@ -54,6 +54,11 @@ class Config:
     shadow_retrieval: bool = True  # 権限除外検出（フィルタなし検索で差分判定）
     user_groups: list[str] = ["all"]
 
+    # Vertex AI Search
+    use_vertex_ai_search: bool = True
+    vertex_search_engine_id: str = os.environ.get("VERTEX_SEARCH_ENGINE_ID", "")
+    vertex_search_data_store_id: str = os.environ.get("VERTEX_SEARCH_DATA_STORE_ID", "")
+
     # Answerability Gate
     answerability_threshold: float = 0.0  # 0=無効。リランキング後のtop1スコアがこれ未満なら拒否
 

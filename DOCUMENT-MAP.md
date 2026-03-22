@@ -74,6 +74,7 @@
 |---------|------|
 | [local-operations.md](doc/guide/local-operations.md) | ローカル操作ガイド（evaluate/ingest/dev server の実行方法・ハマりポイント） |
 | [chunk-experiment.md](doc/guide/chunk-experiment.md) | チャンクサイズ実験ガイド（並列Ingest/Evaluate、インデックス作成手順） |
+| [vertex-ai-search-setup.md](doc/guide/vertex-ai-search-setup.md) | Vertex AI Search 環境構築ガイド（GCS/データストア/Engine作成・ハマりポイント） |
 
 ## プレゼン資料 (doc/presentation/)
 

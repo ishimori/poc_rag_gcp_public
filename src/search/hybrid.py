@@ -52,6 +52,12 @@ def hybrid_search(
     """ベクトル検索 + キーワード検索 → RRF統合（+ Multi-Query Expansion）"""
     k = top_k or config.top_k
 
+    # Vertex AI Search モード: Firestore の代わりに Vertex AI Search API を使用
+    if config.use_vertex_ai_search:
+        from src.search.vertex_ai_searcher import vertex_ai_search
+
+        return vertex_ai_search(query, top_k=k, user_groups=user_groups)
+
     # 検索対象のクエリを準備
     queries = [query]
     if config.multi_query:

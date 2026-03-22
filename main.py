@@ -83,6 +83,7 @@ def _save_query_log(
                     "shadow_retrieval": config.shadow_retrieval,
                     "multi_query": config.multi_query,
                     "contextual_retrieval": config.contextual_retrieval,
+                    "use_vertex_ai_search": config.use_vertex_ai_search,
                 },
                 "timestamp": firestore.SERVER_TIMESTAMP,
             }
@@ -564,6 +565,7 @@ _TUNABLE_PARAMS: dict[str, type] = {
     "multi_query": bool,
     "answerability_threshold": float,
     "contextual_retrieval": bool,
+    "use_vertex_ai_search": bool,
 }
 
 
