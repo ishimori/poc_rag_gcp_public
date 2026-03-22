@@ -3,7 +3,7 @@
 > DD-019 シリーズで実施した全施策の時系列記録。
 > 何を変えて、何が起きて、スコアがどう動いたかを、失敗・勘違いも含めて記録する。
 >
-> **最終更新: 2026-03-22 17:15（DD-019-10〜13 フル評価完了時点）**
+> **最終更新: 2026-03-22 20:00（DD-019-14 security 4段階バグ修正完了時点）**
 
 ## 変更の4軸
 
@@ -23,10 +23,10 @@
 ```mermaid
 xychart-beta
     title "RAG Overall Score 推移"
-    x-axis ["Baseline", "GrpA", "GrpB", "019-8", "019-8-2", "019-10/13"]
+    x-axis ["Baseline", "GrpA", "GrpB", "019-8", "019-8-2", "019-10/13", "019-14"]
     y-axis "Overall %" 0 --> 100
-    bar [28.4, 34.8, 50.0, 75.7, 81.1, 81.1]
-    line [28.4, 34.8, 50.0, 75.7, 81.1, 81.1]
+    bar [28.4, 34.8, 50.0, 75.7, 81.1, 81.1, 81.1]
+    line [28.4, 34.8, 50.0, 75.7, 81.1, 81.1, 81.1]
 ```
 
 ```mermaid
@@ -65,6 +65,12 @@ timeline
         : ✅ unanswerable 80%→100%
         : △ security 0%→20%（Shadow Retrieval部分的）
         : ❌ Multi-Query逆効果（-2.7pt）→OFFに戻し
+    section DD-019-14 (security修正)
+        フル評価はDD-022に委任
+        : 4段階バグ修正（玉ねぎ型バグ）
+        : ✅ security 0%→80%（ピンポイント検証）
+        : ⚠ runner.pyがuser_groups未指定（全評価で権限フィルタOFFだった）
+        : ⚠ keyword_searcherに権限フィルタなし（RRF経由で機密漏洩）
 ```
 
 | # | 時点 | Overall | 差分 | 主要施策 | 評価ファイル |
@@ -76,6 +82,7 @@ timeline
 | 4 | DD-019-8-2完了 | **81.1%** (60/74) | +5.4pt | キーワード検索の分割バグ修正, AIフィルタ(#12) | `eval_20260322_054817.json` |
 | 5 | DD-019-10/13適用 | **81.1%** (60/74) | ±0pt | 権限即拒否, 曖昧判定安定化（Multi-Query OFF） | `eval_20260322_080611.json` |
 | — | DD-019-9 chunk=1200 | **85.1%** | — | チャンクサイズ1200実験（DD-019-10~13も同時適用） | `DD-019-9/result_B_chunk1200.json` |
+| 6 | DD-019-14完了 | — | — | 4段階バグ修正: chunker YAML解析, keyword権限フィルタ, Shadow Retrieval差分判定, runner.py user_groups. security 0%→80%(ピンポイント). フル評価はDD-022に委任 | — |
 
 ---
 
@@ -217,6 +224,28 @@ timeline
 2. **DD-019-10: security 20%止まり** — 両LLMが推奨した「Shadow Retrieval + アプリ側即拒否」を実装したが、検索結果が0件にならないケースが多く、期待した100%には届かず
 3. **DD-019-13の変更が評価方法の軸に影響** — LLM-as-Judgeのプロンプトに「聞き返し評価基準」を追加したため、過去の評価と厳密には比較できない（ただし影響はambiguousのみ）
 
+### DD-019-14: 残失敗ケース分析と90%達成施策
+
+**変更した軸**: 検索技術（4段階のバグ修正）
+
+**経緯**: DD-019-9 実験B（85.1%）の残り11件の失敗ケースを分析した結果、security テストが構造的に FAIL する「玉ねぎ型バグ」を4段階で発掘。
+
+| # | バグ | 層 | 影響 |
+|---|------|---|------|
+| Bug 1 | `chunker.py` YAML ブロック形式リスト未対応 | Ingest | `meeting_minutes_exec.md` の `allowed_groups` が `["all"]` に |
+| Bug 2 | `keyword_searcher.py` に権限フィルタなし | 検索 | ベクトル検索で除外してもキーワード検索経由で機密チャンク混入 |
+| Bug 3 | Shadow Retrieval の条件が `search_results==0` のみ | 権限制御 | 公開文書がヒットする限り発動しない |
+| Bug 4 | `runner.py` が `rag_flow()` に `user_groups` を渡さない | 評価 | **全評価で権限フィルタが無効**。最上流のバグ |
+
+**結果**: security 0% → 80%（ピンポイント検証。フル評価は DD-022 に委任）
+
+**失敗・勘違い:**
+
+1. **Bug 4 を最後に発見** — 最上流のバグ（評価パイプラインの `user_groups` 未指定）を最後に発見。Bug 1〜3 を順番に直したが、全て「評価時に権限フィルタが OFF」という前提の上で空振りしていた。「テストが正しく動いているか」を最初に疑うべきだった
+2. **LLM 捏造を疑った** — security-002, 003 が検索結果にない情報を回答したため「LLM の hallucination」と判断したが、実際は Bug 4 により権限フィルタ OFF → 機密チャンクが普通にヒット → LLM は正しく回答していた
+
+詳細分析: [DD-019-14/security_bug_analysis.md](../DD/DD-019-14/security_bug_analysis.md)
+
 ---
 
 ## 繰り返し発生した問題
@@ -226,6 +255,7 @@ timeline
 | max_output_tokens=256で空レスポンス | DD-013, 019-2, 019-3, 019-8 | Gemini 2.5 Flashのthinkingトークンが出力枠を消費 |
 | 構文チェックのみで完了マーク | DD-019-3 | 実行検証をスキップ。DDテンプレートに機械検証ルールを追加して再発防止 |
 | テストデータの不備 | DD-019-5(allowed_groups未設定) | Ingest前のバリデーション不足 |
+| 評価パイプラインの引数不足 | DD-019-14(user_groups未指定) | runner.py が rag_flow() に user_groups を渡さず権限フィルタ無効 |
 
 ---
 
@@ -240,9 +270,9 @@ timeline
   ↓
 [検索] ハイブリッド検索
   ├─ ベクトル検索 (Firestore, Pre-filtering, task_type指定)
-  └─ キーワード検索 (型番正規表現 + 一般語テキストマッチ)
+  └─ キーワード検索 (型番正規表現 + 一般語テキストマッチ + 権限フィルタ)
   ↓
-[権限] Shadow Retrieval (検索結果0件時に権限除外を検出 → 即拒否)
+[権限] Shadow Retrieval (フィルタなし/あり差分で権限除外を検出 → 即拒否)
   ↓
 [後処理] RRF統合 → リランキング (Vertex AI Ranker)
   ↓
@@ -272,7 +302,7 @@ timeline
 
 | カテゴリ | 現在 | 課題 |
 |---------|------|------|
-| security | 20% | Shadow Retrievalの発動条件改善、またはアプローチ変更 |
-| semantic | 50〜67% | LLM-as-Judgeのぶれ含む。Multi-Queryは改善が必要 |
+| security | 80%（ピンポイント） | security-002 のみ未改善（ベクトル検索top-10に権限外文書が入らず差分検出不可） |
+| semantic | 50〜67% | LLM-as-Judgeのぶれ含む。検索で引けないケースが残る |
 | noise_resistance | 67〜83% | ぶれが大きい |
-| chunk_size | 800 | 1200への変更で+4pt見込み（要再Ingest） |
+| chunk_size | 1200（Firestore） | DD-022 で 1200/1600/2000 の比較実験中。config.py デフォルトは 800 のまま |
