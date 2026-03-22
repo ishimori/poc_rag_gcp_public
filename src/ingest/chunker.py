@@ -19,20 +19,42 @@ class Chunk:
 
 
 def _extract_frontmatter(text: str) -> tuple[str, dict[str, str | list[str]]]:
-    """Markdownのフロントマターからメタデータを抽出する"""
+    """Markdownのフロントマターからメタデータを抽出する
+
+    インライン形式とブロック形式の両方をサポート:
+      allowed_groups: ["all"]           # インライン形式
+      allowed_groups:                    # ブロック形式
+        - exec_board
+    """
     match = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.DOTALL)
     if not match:
         return text, {}
 
     meta: dict[str, str | list[str]] = {}
-    for line in match.group(1).split("\n"):
-        kv = re.match(r"^(\w+):\s*(.+)$", line)
+    lines = match.group(1).split("\n")
+    i = 0
+    while i < len(lines):
+        # key: value（インライン）or key:（ブロックリストの開始）
+        kv = re.match(r"^(\w+):\s*(.*)$", lines[i])
         if kv:
+            key = kv.group(1)
             value = kv.group(2).strip()
             if value.startswith("[") and value.endswith("]"):
-                meta[kv.group(1)] = [s.strip().strip('"') for s in value[1:-1].split(",")]
+                # インライン形式リスト: ["all", "hr_admin"]
+                meta[key] = [s.strip().strip('"') for s in value[1:-1].split(",")]
+            elif value:
+                # スカラー値: public
+                meta[key] = value.strip('"')
             else:
-                meta[kv.group(1)] = value.strip('"')
+                # 値なし → 次行以降のブロック形式リストを収集
+                items: list[str] = []
+                while i + 1 < len(lines) and re.match(r"^\s+-\s+", lines[i + 1]):
+                    i += 1
+                    item = re.sub(r"^\s+-\s+", "", lines[i]).strip().strip('"')
+                    items.append(item)
+                if items:
+                    meta[key] = items
+        i += 1
     return match.group(2), meta
 
 
