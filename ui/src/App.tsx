@@ -191,7 +191,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>エンタープライズRAG PoC</h1>
+        <h1><a href="/" style={{ color: 'inherit', textDecoration: 'none' }}>エンタープライズRAG PoC</a></h1>
         <p>社内ドキュメントに基づいて質問に回答します</p>
         <a href="/admin" className="header-admin-link">Admin →</a>
       </header>

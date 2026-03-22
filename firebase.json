@@ -3,6 +3,7 @@
     "public": "ui/dist",
     "rewrites": [
       { "source": "/api/admin/**", "function": "admin" },
+      { "source": "/api", "function": "chat" },
       { "source": "**", "destination": "/index.html" }
     ],
     "headers": [
