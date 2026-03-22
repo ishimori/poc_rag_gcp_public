@@ -117,32 +117,55 @@ def chat(req: https_fn.Request) -> https_fn.Response:
     model = body.get("model")
     user_groups = body.get("user_groups", config.user_groups)
 
-    start_time = time.monotonic()
-    result = rag_flow(query, model_name=model, user_groups=user_groups)
-    elapsed_ms = int((time.monotonic() - start_time) * 1000)
-
-    sources = [
-        {
-            "content": s.content,
-            "score": s.score,
-            "source_file": s.source_file,
-            "chunk_index": s.chunk_index,
-            "category": s.category,
-            "security_level": s.security_level,
-        }
-        for s in result.reranked_sources
+    # リクエスト単位で技術設定を適用（UIの選択状態を正確に反映）
+    techniques = body.get("techniques", {})
+    saved_config = {}
+    tech_keys = [
+        "hybrid_search",
+        "metadata_scoring",
+        "clarification",
+        "permission_filter",
+        "shadow_retrieval",
+        "multi_query",
+        "contextual_retrieval",
+        "use_vertex_ai_search",
     ]
+    for key in tech_keys:
+        if key in techniques:
+            saved_config[key] = getattr(config, key)
+            setattr(config, key, techniques[key])
 
-    response_data = {
-        "answer": result.answer,
-        "query": result.query,
-        "sources": sources,
-        "is_clarification": result.is_clarification,
-    }
+    try:
+        start_time = time.monotonic()
+        result = rag_flow(query, model_name=model, user_groups=user_groups)
+        elapsed_ms = int((time.monotonic() - start_time) * 1000)
 
-    _save_query_log(query, result.answer, model, elapsed_ms, sources)
+        sources = [
+            {
+                "content": s.content,
+                "score": s.score,
+                "source_file": s.source_file,
+                "chunk_index": s.chunk_index,
+                "category": s.category,
+                "security_level": s.security_level,
+            }
+            for s in result.reranked_sources
+        ]
 
-    return _json_response(response_data)
+        response_data = {
+            "answer": result.answer,
+            "query": result.query,
+            "sources": sources,
+            "is_clarification": result.is_clarification,
+        }
+
+        _save_query_log(query, result.answer, model, elapsed_ms, sources)
+
+        return _json_response(response_data)
+    finally:
+        # config を元に戻す
+        for key, val in saved_config.items():
+            setattr(config, key, val)
 
 
 # ---------------------------------------------------------------------------

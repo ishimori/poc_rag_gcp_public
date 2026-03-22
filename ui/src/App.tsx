@@ -157,6 +157,7 @@ export default function App() {
           query,
           model: selectedModel,
           user_groups: USER_ROLES.find((r) => r.id === selectedRole)!.groups,
+          techniques: techConfig,
         }),
       })
 
