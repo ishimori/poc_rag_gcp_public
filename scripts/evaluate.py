@@ -16,6 +16,7 @@ if sys.stdout.encoding != "utf-8":
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from src.config import config
 from src.evaluate.reporter import generate_report, print_report, save_report
 from src.evaluate.runner import run_evaluation
 from src.evaluate.scorer import EvalCase
@@ -32,9 +33,24 @@ def main():
         default=0,
         help="先頭N件だけ実行する（検証用。0=全件）",
     )
+    parser.add_argument(
+        "--collection",
+        type=str,
+        default=None,
+        help="Override collection_name (default: config value)",
+    )
     args = parser.parse_args()
 
+    # CLI引数でconfigを上書き
+    if args.collection is not None:
+        config.collection_name = args.collection
+
+    # task_id をコレクション別にする
+    task_id = f"evaluate:{config.collection_name}"
+
     print("=== RAG Evaluation ===")
+    print(f"Collection: {config.collection_name}")
+    print(f"Task ID: {task_id}")
     print()
 
     with open(EVAL_DATASET, encoding="utf-8") as f:
@@ -67,7 +83,7 @@ def main():
     active_count = 0
 
     update_task_status(
-        "evaluate",
+        task_id,
         running=True,
         cancel=False,
         current=0,
@@ -76,6 +92,7 @@ def main():
         elapsed=0.0,
         estimated_remaining=0.0,
         results=[],
+        collection=config.collection_name,
     )
 
     def _on_progress(current: int, total: int, result) -> None:
@@ -90,7 +107,7 @@ def main():
             est_remaining = avg_per_active * (total - current)
 
         update_task_status(
-            "evaluate",
+            task_id,
             current=current,
             total=total,
             current_id=result.id,
@@ -99,12 +116,12 @@ def main():
         )
 
     def _should_cancel() -> bool:
-        return check_cancel("evaluate")
+        return check_cancel(task_id)
 
     try:
         results = run_evaluation(cases, on_progress=_on_progress, should_cancel=_should_cancel)
     finally:
-        clear_task_status("evaluate")
+        clear_task_status(task_id)
 
     report = generate_report(results)
     print_report(report)
