@@ -1,11 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  getConfig, updateConfig, runIngest, runEvaluate, getSources,
-  getEvalStatus, cancelEvaluate, getIngestStatus, cancelIngest,
-  type ConfigParams, type EvalProgress, type EvalReport, type IngestResult, type IngestProgress, type SourceFile,
+  getCollections, setActiveCollection, getTasks, cancelIngest, cancelEvaluate,
+  type Collection, type TaskStatus,
 } from './api'
-
-type Status = 'idle' | 'loading' | 'success' | 'error'
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60)
@@ -13,484 +10,228 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+function progressPct(task: TaskStatus): number {
+  if (!task.total || task.total === 0) return 0
+  return Math.round(((task.current ?? 0) / task.total) * 100)
+}
+
+function taskLabel(task: TaskStatus): string {
+  if (task.running) return '実行中'
+  if (task.current && task.total && task.current >= task.total) return '完了'
+  return '待機中'
+}
+
+function taskColor(task: TaskStatus): string {
+  if (task.running) return '#4a90d9'
+  if (task.current && task.total && task.current >= task.total) return '#52c41a'
+  return '#e8e8e8'
+}
+
 export default function Tuning() {
-  const [config, setConfig] = useState<ConfigParams | null>(null)
-  const [draft, setDraft] = useState<Partial<ConfigParams>>({})
-  const [configStatus, setConfigStatus] = useState<Status>('idle')
-
-  const [ingestStatus, setIngestStatus] = useState<Status>('idle')
-  const [ingestResult, setIngestResult] = useState<IngestResult | null>(null)
-  const [ingestClear, setIngestClear] = useState(true)
-  const [ingestProgress, setIngestProgress] = useState<IngestProgress | null>(null)
-  const [ingestDetached, setIngestDetached] = useState(false)
-
-  const [evalStatus, setEvalStatus] = useState<Status>('idle')
-  const [evalReport, setEvalReport] = useState<EvalReport | null>(null)
-  const [evalProgress, setEvalProgress] = useState<EvalProgress | null>(null)
-  // 画面再オープン時に既存ジョブを検出した場合、POSTレスポンスは受け取れない
-  const [evalDetached, setEvalDetached] = useState(false)
-
-  const [retuneStatus, setRetuneStatus] = useState<Status>('idle')
-
-  const [sourceFiles, setSourceFiles] = useState<SourceFile[]>([])
-
+  const [collections, setCollections] = useState<Collection[]>([])
+  const [activeCollection, setActiveCollectionState] = useState('')
+  const [ingestTasks, setIngestTasks] = useState<TaskStatus[]>([])
+  const [evalTasks, setEvalTasks] = useState<TaskStatus[]>([])
   const [error, setError] = useState('')
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const ingestPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
+  // 初期読み込み
   useEffect(() => {
-    getConfig().then((c) => {
-      setConfig(c)
-      setDraft(c)
-    }).catch((e) => setError(e.message))
-    getSources().then((res) => setSourceFiles(res.files)).catch(() => {})
-
-    // マウント時に実行中ジョブを検出
-    getIngestStatus().then((status) => {
-      if (status.running) {
-        setIngestStatus('loading')
-        setIngestProgress(status)
-        setIngestDetached(true)
-      }
-    }).catch(() => {})
-    getEvalStatus().then((status) => {
-      if (status.running) {
-        setEvalStatus('loading')
-        setEvalProgress(status)
-        setEvalDetached(true)
-      }
-    }).catch(() => {})
+    let active = true
+    getCollections()
+      .then((res) => { if (active) { setCollections(res.collections); setActiveCollectionState(res.current) } })
+      .catch((e) => { if (active) setError(e instanceof Error ? e.message : 'Failed to load collections') })
+    getTasks()
+      .then((res) => {
+        if (active) {
+          setIngestTasks(res.tasks.filter((t) => t.task_id.startsWith('ingest:')))
+          setEvalTasks(res.tasks.filter((t) => t.task_id.startsWith('evaluate:')))
+        }
+      })
+      .catch(() => {})
+    return () => { active = false }
   }, [])
 
-  // Ingest進捗ポーリング
+  // タスクポーリング（2秒間隔）
   useEffect(() => {
-    if (ingestStatus === 'loading') {
-      ingestPollRef.current = setInterval(async () => {
-        try {
-          const status = await getIngestStatus()
-          setIngestProgress(status)
-          if (ingestDetached && !status.running) {
-            setIngestStatus('success')
-            setIngestDetached(false)
-          }
-        } catch {
-          // ポーリング失敗は無視
-        }
-      }, 2000)
-    }
+    pollRef.current = setInterval(() => {
+      getTasks()
+        .then((res) => {
+          setIngestTasks(res.tasks.filter((t) => t.task_id.startsWith('ingest:')))
+          setEvalTasks(res.tasks.filter((t) => t.task_id.startsWith('evaluate:')))
+        })
+        .catch(() => {})
+    }, 2000)
     return () => {
-      if (ingestPollRef.current) {
-        clearInterval(ingestPollRef.current)
-        ingestPollRef.current = null
-      }
-      if (ingestStatus !== 'loading') {
-        setIngestProgress(null)
-      }
+      if (pollRef.current) clearInterval(pollRef.current)
     }
-  }, [ingestStatus, ingestDetached])
+  }, [])
 
-  // Evaluate進捗ポーリング
-  useEffect(() => {
-    if (evalStatus === 'loading') {
-      pollRef.current = setInterval(async () => {
-        try {
-          const status = await getEvalStatus()
-          setEvalProgress(status)
-          // detachedモード: ポーリングで完了を検出
-          if (evalDetached && !status.running) {
-            setEvalStatus('success')
-            setEvalDetached(false)
-          }
-        } catch {
-          // ポーリング失敗は無視（バックエンドが忙しい場合がある）
-        }
-      }, 2000)
-    }
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-      }
-      if (evalStatus !== 'loading') {
-        setEvalProgress(null)
-      }
-    }
-  }, [evalStatus, evalDetached])
-
-  function handleDraftChange(key: keyof ConfigParams, value: string) {
-    setDraft((prev) => ({ ...prev, [key]: key === 'rerank_threshold' ? parseFloat(value) : parseInt(value) }))
-  }
-
-  async function handleSaveConfig() {
-    setConfigStatus('loading')
+  async function handleSwitchCollection(name: string) {
     try {
-      const res = await updateConfig(draft)
-      setConfig({ ...config!, ...res.updated })
-      setConfigStatus('success')
+      await setActiveCollection(name)
+      setActiveCollectionState(name)
+      const res = await getCollections()
+      setCollections(res.collections)
+      setActiveCollectionState(res.current)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-      setConfigStatus('error')
+      setError(e instanceof Error ? e.message : 'Failed to switch collection')
     }
   }
 
-  async function handleIngest() {
-    setIngestStatus('loading')
-    setIngestResult(null)
-    setIngestDetached(false)
+  async function handleCancelTask(taskId: string) {
     try {
-      const res = await runIngest(ingestClear)
-      setIngestResult(res)
-      setIngestStatus('success')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-      setIngestStatus('error')
-    }
-  }
-
-  async function handleCancelIngest() {
-    try {
-      await cancelIngest()
+      if (taskId.startsWith('ingest:')) {
+        await cancelIngest()
+      } else if (taskId.startsWith('evaluate:')) {
+        await cancelEvaluate()
+      }
     } catch {
       // キャンセル失敗は無視
     }
   }
 
-  async function handleEvaluate() {
-    setEvalStatus('loading')
-    setEvalReport(null)
-    setEvalDetached(false)
-    try {
-      const res = await runEvaluate()
-      setEvalReport(res.report)
-      setEvalStatus('success')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-      setEvalStatus('error')
-    }
+  function renderTaskRow(task: TaskStatus) {
+    const pct = progressPct(task)
+    const color = taskColor(task)
+    const label = taskLabel(task)
+    const collectionName = task.collection || task.task_id.split(':')[1] || ''
+    const isRunning = task.running
+
+    return (
+      <div key={task.task_id} className="admin-job-row">
+        <div className="admin-job-name">
+          <strong>{collectionName}</strong>
+          {task.chunk_size && (
+            <span className="admin-job-params">{task.chunk_size} / overlap {task.chunk_overlap ?? '?'}</span>
+          )}
+        </div>
+        <div className="admin-job-progress">
+          <div className="admin-progress-bar">
+            <div
+              className="admin-progress-bar-fill"
+              style={{ width: `${pct}%`, background: color }}
+            />
+          </div>
+          <div className="admin-job-detail">
+            {isRunning && task.current_file && (
+              <span className="admin-job-file">処理中: {task.current_file}</span>
+            )}
+            {isRunning && task.current_id && (
+              <span className="admin-job-file">最新: {task.current_id}
+                {task.results && task.results.length > 0 && (() => {
+                  const last = task.results[task.results.length - 1]
+                  return ` → ${last.status}${last.llm_label ? ` (${last.llm_label})` : ''}`
+                })()}
+              </span>
+            )}
+            <span>
+              {task.current ?? 0} / {task.total ?? 0}
+              {task.elapsed != null && ` | ${formatTime(task.elapsed)} 経過`}
+              {isRunning && task.estimated_remaining != null && task.estimated_remaining > 0 && ` | 残り約 ${formatTime(task.estimated_remaining)}`}
+            </span>
+          </div>
+        </div>
+        <div className="admin-job-status">
+          <span className={`admin-status-badge admin-status-${isRunning ? 'running' : label === '完了' ? 'done' : 'waiting'}`}>
+            {label}
+          </span>
+        </div>
+        <div className="admin-job-action">
+          <button
+            className="admin-btn-sm admin-btn-cancel"
+            onClick={() => handleCancelTask(task.task_id)}
+            disabled={!isRunning}
+          >
+            中止
+          </button>
+        </div>
+      </div>
+    )
   }
-
-  async function handleCancel() {
-    try {
-      await cancelEvaluate()
-    } catch {
-      // キャンセル失敗は無視
-    }
-  }
-
-  async function handleRetune() {
-    setRetuneStatus('loading')
-    setError('')
-    setEvalDetached(false)
-    try {
-      // 1. Save config
-      await updateConfig(draft)
-      // 2. Ingest
-      setIngestStatus('loading')
-      const ingestRes = await runIngest(true)
-      setIngestResult(ingestRes)
-      setIngestStatus('success')
-      // 3. Evaluate
-      setEvalStatus('loading')
-      const evalRes = await runEvaluate()
-      setEvalReport(evalRes.report)
-      setEvalStatus('success')
-      setRetuneStatus('success')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-      setRetuneStatus('error')
-    }
-  }
-
-  const isProd = import.meta.env.PROD
-  const isRunning = ingestStatus === 'loading' || evalStatus === 'loading' || retuneStatus === 'loading'
-
-  if (!config) return <div className="admin-page"><p>Loading...</p></div>
-
-  const PARAM_FIELDS: { key: keyof ConfigParams; label: string; hint: string; step?: string }[] = [
-    { key: 'chunk_size', label: '分割サイズ', hint: '文書を何文字ごとに区切るか。大きいと文脈が豊富、小さいと検索精度が上がる' },
-    { key: 'chunk_overlap', label: '重複幅', hint: '分割の境界で前後の文を重ねる文字数。情報の切れ目を防ぐ' },
-    { key: 'top_k', label: '検索件数', hint: '質問に対して何件の候補を検索するか' },
-    { key: 'rerank_top_n', label: '絞り込み件数', hint: '検索結果をAIが再評価した後、上位何件を回答に使うか' },
-    { key: 'rerank_threshold', label: '足切りスコア', hint: 'AIの再評価でこのスコア未満の候補は除外する（0〜1）', step: '0.01' },
-  ]
-
-  const ingestProgressPct = ingestProgress && ingestProgress.total > 0
-    ? Math.round((ingestProgress.current / ingestProgress.total) * 100)
-    : 0
-
-  const progressPct = evalProgress && evalProgress.total > 0
-    ? Math.round((evalProgress.current / evalProgress.total) * 100)
-    : 0
 
   return (
     <div className="admin-page">
-      <h1>Evaluation & Tuning</h1>
+      <h1>Operations Monitor</h1>
       {error && <div className="admin-error">{error}</div>}
 
       <div className="admin-guide">
-        <strong>操作フロー:</strong> ① パラメータ変更 → ② Re-tune実行（Save → Ingest → Evaluate を一括実行）→ ③ Historyで前回と比較
+        <strong>CLI専用に移行した機能:</strong> パラメータ編集・Technique Toggles → <code>src/config.py</code>、
+        Re-tune → <code>python scripts/run_chunk_experiments.py</code>。
+        この画面では実行の進捗監視とコレクション切替のみ行います。
       </div>
 
-      {isProd && (
-        <div className="admin-error" style={{ background: '#fff3cd', color: '#856404', borderColor: '#ffc107' }}>
-          ⚠ Ingest・Evaluate・Re-tune はローカル環境でのみ実行できます。パラメータ変更のみ可能です。
-          <br />
-          <code style={{ fontSize: '0.85em' }}>bash scripts/dev.sh</code> でローカルサーバーを起動してください。
-        </div>
-      )}
-
-      {/* Technique Toggles */}
+      {/* Collection Selector */}
       <div className="admin-section">
-        <h2>Technique Toggles</h2>
-        <p className="admin-section-desc">
-          技術をOFFにして Re-tune すると、その技術の効果（スコア差分）を測定できます。
-          <strong>チャンキング・ヘッダーの変更は再インジェストが必要です。</strong>
-        </p>
-        <div className="admin-toggle-grid">
-          <label className="admin-toggle">
-            <input
-              type="checkbox"
-              checked={draft.header_injection ?? true}
-              onChange={(e) => setDraft((prev) => ({ ...prev, header_injection: e.target.checked }))}
-              disabled={isRunning}
-            />
-            <div>
-              <span className="admin-toggle-label">02 ヘッダーインジェクション</span>
-              <span className="admin-param-hint">各チャンクの先頭に文書タイトルを付与</span>
-              {!(draft.header_injection ?? true) && <span className="admin-toggle-warn">⚠ 再インジェスト必要</span>}
-            </div>
-          </label>
-          <label className="admin-toggle">
-            <input
-              type="checkbox"
-              checked={(draft.rerank_top_n ?? 5) < (draft.top_k ?? 10)}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setDraft((prev) => ({ ...prev, rerank_top_n: 5 }))
-                } else {
-                  setDraft((prev) => ({ ...prev, rerank_top_n: prev.top_k ?? 10 }))
-                }
-              }}
-              disabled={isRunning}
-            />
-            <div>
-              <span className="admin-toggle-label">04 リランキング</span>
-              <span className="admin-param-hint">検索結果をAIが再評価して上位に絞る</span>
-              {(draft.rerank_top_n ?? 5) >= (draft.top_k ?? 10) && <span className="admin-toggle-warn">OFF（top_n=top_k で無効化）</span>}
-            </div>
-          </label>
+        <h2>検索対象コレクション</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <select
+            className="admin-collection-select"
+            value={activeCollection}
+            onChange={(e) => handleSwitchCollection(e.target.value)}
+          >
+            {collections.map((c) => (
+              <option key={c.name} value={c.name}>
+                {c.name} ({c.count} chunks)
+              </option>
+            ))}
+          </select>
+          <span style={{ fontSize: '0.82rem', color: '#666' }}>
+            チャット・評価の検索対象が切り替わります
+          </span>
         </div>
       </div>
 
-      {/* Parameters */}
+      {/* Ingest Monitor */}
       <div className="admin-section">
-        <h2>Parameters</h2>
-        <div className="admin-param-grid">
-          {PARAM_FIELDS.map(({ key, label, hint, step }) => (
-            <label key={key} className="admin-param">
-              <span>{label}</span>
-              <input
-                type="number"
-                step={step || '1'}
-                value={draft[key] as number ?? ''}
-                onChange={(e) => handleDraftChange(key, e.target.value)}
-                disabled={isRunning}
-              />
-              <span className="admin-param-hint">{hint}</span>
-            </label>
-          ))}
-        </div>
-        <button
-          className="admin-btn"
-          onClick={handleSaveConfig}
-          disabled={isRunning}
-        >
-          {configStatus === 'loading' ? 'Saving...' : 'Save Parameters'}
-        </button>
+        <h2>Ingest（データ取り込み）</h2>
+        {ingestTasks.length === 0 ? (
+          <p style={{ color: '#999', fontSize: '0.85rem' }}>実行中・完了済みのIngestジョブはありません</p>
+        ) : (
+          <div className="admin-job-list">
+            {ingestTasks.map(renderTaskRow)}
+          </div>
+        )}
       </div>
 
-      {/* Actions */}
+      {/* Evaluate Monitor */}
       <div className="admin-section">
-        <h2>Actions</h2>
-        <div className="admin-actions">
-          <div className="admin-action-card">
-            <div className="admin-action-header">
-              <button className="admin-btn" onClick={handleIngest} disabled={isRunning || isProd}>
-                {ingestStatus === 'loading' ? '取り込み中...' : 'データ取り込み（Ingest）'}
-              </button>
-            </div>
-            <p className="admin-action-desc">ソース文書を分割・ベクトル化してDBに格納する</p>
-            <label className="admin-checkbox">
-              <input
-                type="checkbox"
-                checked={ingestClear}
-                onChange={(e) => setIngestClear(e.target.checked)}
-                disabled={isRunning}
-              />
-              {ingestClear
-                ? 'DBを空にしてから全文書を再取り込み（パラメータ変更時はこちら）'
-                : '新規・変更分だけ追加（既存データはそのまま）'}
-            </label>
-            {ingestStatus === 'loading' && ingestProgress && ingestProgress.total > 0 && (
-              <div className="admin-eval-progress">
-                <div className="admin-eval-progress-info">
-                  <span>{ingestProgress.current} / {ingestProgress.total} ファイル完了</span>
-                  <button className="admin-btn-sm admin-btn-cancel" onClick={handleCancelIngest}>中止</button>
-                </div>
-                <div className="admin-progress-bar">
-                  <div
-                    className="admin-progress-bar-fill"
-                    style={{ width: `${ingestProgressPct}%` }}
-                  />
-                </div>
-                <div className="admin-eval-progress-detail">
-                  <span>{formatTime(ingestProgress.elapsed)} 経過</span>
-                  {ingestProgress.estimated_remaining > 0 && (
-                    <span>残り約 {formatTime(ingestProgress.estimated_remaining)}</span>
-                  )}
-                </div>
-                {ingestProgress.current_file && (
-                  <div className="admin-eval-progress-current">
-                    処理中: {ingestProgress.current_file}
-                  </div>
-                )}
-              </div>
-            )}
-            {sourceFiles.length > 0 && (
-              <details className="admin-source-files">
-                <summary>取り込み対象ファイル（{sourceFiles.length}件）</summary>
-                <ul>
-                  {sourceFiles.map((f) => (
-                    <li key={f.name}>
-                      {f.name}
-                      <span className="admin-file-size">{(f.size / 1024).toFixed(1)} KB</span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
+        <h2>Evaluate（精度評価）</h2>
+        {evalTasks.length === 0 ? (
+          <p style={{ color: '#999', fontSize: '0.85rem' }}>実行中・完了済みのEvaluateジョブはありません</p>
+        ) : (
+          <div className="admin-job-list">
+            {evalTasks.map(renderTaskRow)}
           </div>
-
-          <div className="admin-action-card">
-            <div className="admin-action-header">
-              <button className="admin-btn" onClick={handleEvaluate} disabled={isRunning || isProd}>
-                {evalStatus === 'loading' ? '評価中...' : '精度評価（Evaluate）'}
-              </button>
-            </div>
-            <p className="admin-action-desc">テストケースで質問→回答し、正答率を測定する</p>
-            {evalStatus === 'loading' && evalProgress && evalProgress.total > 0 && (
-              <div className="admin-eval-progress">
-                <div className="admin-eval-progress-info">
-                  <span>{evalProgress.current} / {evalProgress.total} 件完了</span>
-                  <button className="admin-btn-sm admin-btn-cancel" onClick={handleCancel}>中止</button>
-                </div>
-                <div className="admin-progress-bar">
-                  <div
-                    className="admin-progress-bar-fill"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-                <div className="admin-eval-progress-detail">
-                  <span>{formatTime(evalProgress.elapsed)} 経過</span>
-                  {evalProgress.estimated_remaining > 0 && (
-                    <span>残り約 {formatTime(evalProgress.estimated_remaining)}</span>
-                  )}
-                </div>
-                {evalProgress.current_id && (
-                  <div className="admin-eval-progress-current">
-                    最新: {evalProgress.current_id}
-                    {evalProgress.results.length > 0 && (() => {
-                      const last = evalProgress.results[evalProgress.results.length - 1]
-                      return ` → ${last.status}${last.llm_label ? ` (${last.llm_label})` : ''}`
-                    })()}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="admin-action-card">
-            <div className="admin-action-header">
-              <button className="admin-btn admin-btn-primary" onClick={handleRetune} disabled={isRunning || isProd}>
-                {retuneStatus === 'loading' ? 'Re-tune中...' : '一括実行（パラメータ保存 → 取り込み → 評価）'}
-              </button>
-            </div>
-            <p className="admin-action-desc">上の3ステップをまとめて実行する</p>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Ingest Result */}
-      {ingestResult && (
+      {/* Score Comparison */}
+      {collections.length > 0 && (
         <div className="admin-section">
-          <h2>Ingest Result</h2>
+          <h2>コレクション一覧</h2>
           <table className="admin-table">
             <thead>
-              <tr><th>File</th><th>Chunks</th><th>Stored</th><th>Skipped</th></tr>
-            </thead>
-            <tbody>
-              {ingestResult.details.map((d) => (
-                <tr key={d.file}>
-                  <td>{d.file}</td><td>{d.chunks}</td><td>{d.stored}</td><td>{d.skipped}</td>
-                </tr>
-              ))}
-              <tr className="admin-table-total">
-                <td>Total</td>
-                <td>{ingestResult.total_chunks}</td>
-                <td>{ingestResult.stored}</td>
-                <td>{ingestResult.skipped}</td>
+              <tr>
+                <th>コレクション</th>
+                <th>チャンク数</th>
+                <th>状態</th>
               </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Evaluation Result */}
-      {evalReport && (
-        <div className="admin-section">
-          <h2>Evaluation Result</h2>
-          <div className="admin-eval-summary">
-            <span className="admin-score">
-              {(evalReport.overall.rate * 100).toFixed(1)}%
-            </span>
-            <span>({evalReport.overall.passed}/{evalReport.overall.total} passed)</span>
-          </div>
-
-          <table className="admin-table">
-            <thead>
-              <tr><th>Type</th><th>Passed</th><th>Total</th><th>Rate</th></tr>
             </thead>
             <tbody>
-              {Object.entries(evalReport.score_by_type).map(([type, s]) => (
-                <tr key={type}>
-                  <td>{type}</td>
-                  <td>{s.passed}</td>
-                  <td>{s.total}</td>
-                  <td className={s.rate >= 0.5 ? 'text-pass' : 'text-fail'}>
-                    {(s.rate * 100).toFixed(0)}%
+              {collections.map((c) => (
+                <tr key={c.name} className={c.name === activeCollection ? 'admin-row-active' : ''}>
+                  <td>
+                    {c.name}
+                    {c.name === activeCollection && <span className="admin-active-badge">active</span>}
                   </td>
+                  <td>{c.count}</td>
+                  <td>{c.count > 0 ? 'Ready' : 'Empty'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-
-          {evalReport.failed_cases.length > 0 && (
-            <details className="admin-failed">
-              <summary>Failed Cases ({evalReport.failed_cases.length})</summary>
-              {evalReport.failed_cases.map((fc) => (
-                <div key={fc.id} className="admin-failed-case">
-                  <div className="admin-failed-id">[{fc.id}] {fc.type}</div>
-                  <div><strong>Q:</strong> {fc.query}</div>
-                  <div><strong>Expected:</strong> {fc.expected}</div>
-                  <div><strong>Got:</strong> {fc.actual.slice(0, 200)}{fc.actual.length > 200 ? '...' : ''}</div>
-                  {fc.keyword_missed.length > 0 && (
-                    <div className="admin-missed">Missed: {fc.keyword_missed.join(', ')}</div>
-                  )}
-                </div>
-              ))}
-            </details>
-          )}
         </div>
       )}
     </div>

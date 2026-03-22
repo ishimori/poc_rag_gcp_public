@@ -737,3 +737,103 @@
   max-height: 400px;
   overflow-y: auto;
 }
+
+/* Operations Monitor */
+.admin-collection-select {
+  padding: 6px 12px;
+  border: 2px solid #4a90d9;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #f0f7ff;
+  color: #1a5fa0;
+  font-weight: 500;
+  min-width: 240px;
+}
+
+.admin-job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-job-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 80px 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 6px;
+}
+
+.admin-job-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-job-name strong {
+  font-size: 0.9rem;
+}
+
+.admin-job-params {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.admin-job-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-job-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.admin-job-file {
+  color: #666;
+}
+
+.admin-status-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.admin-status-running {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.admin-status-done {
+  background: #f0fce8;
+  color: #389e0d;
+}
+
+.admin-status-waiting {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.admin-row-active {
+  background: #f0f7ff;
+}
+
+.admin-active-badge {
+  display: inline-block;
+  margin-left: 8px;
+  background: #e6f4ff;
+  color: #1677ff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+}

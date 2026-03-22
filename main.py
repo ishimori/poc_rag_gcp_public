@@ -680,6 +680,8 @@ def _handle_logs(req: https_fn.Request) -> https_fn.Response:
                 "sources": data.get("sources", []),
                 "source_count": data.get("source_count", 0),
                 "no_answer": data.get("no_answer", False),
+                "collection": data.get("collection", ""),
+                "techniques": data.get("techniques"),
                 "timestamp": ts.isoformat() if ts else None,
             }
         )

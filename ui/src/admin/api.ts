@@ -156,6 +156,44 @@ export function getEvalResults(): Promise<EvalResultSummary[]> {
   return request('/evaluate/results')
 }
 
+// --- Collections ---
+
+export interface Collection {
+  name: string
+  count: number
+  active: boolean
+}
+
+export function getCollections(): Promise<{ collections: Collection[]; current: string }> {
+  return request('/collections')
+}
+
+export function setActiveCollection(name: string): Promise<{ switched_to: string }> {
+  return request('/collections/active', { method: 'PUT', body: JSON.stringify({ name }) })
+}
+
+// --- Tasks ---
+
+export interface TaskStatus {
+  task_id: string
+  running: boolean
+  current?: number
+  total?: number
+  current_file?: string
+  current_id?: string
+  elapsed?: number
+  estimated_remaining?: number
+  collection?: string
+  chunk_size?: number
+  chunk_overlap?: number
+  results?: { id: string; status: string; llm_label: string }[]
+}
+
+export function getTasks(prefix?: string): Promise<{ tasks: TaskStatus[] }> {
+  const q = prefix ? `?prefix=${encodeURIComponent(prefix)}` : ''
+  return request(`/tasks${q}`)
+}
+
 // --- Chunks ---
 
 export interface ChunkItem {
@@ -180,6 +218,7 @@ export interface QueryLog {
   sources: (string | { file: string; score: number })[]
   source_count: number
   no_answer: boolean
+  collection?: string
   techniques?: Record<string, boolean>
   timestamp: string | null
 }

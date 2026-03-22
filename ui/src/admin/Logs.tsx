@@ -109,6 +109,7 @@ export default function Logs() {
                   <tr>
                     <th>Timestamp</th>
                     <th>Query</th>
+                    <th>Collection</th>
                     <th>Time</th>
                     <th>No Answer</th>
                   </tr>
@@ -122,6 +123,7 @@ export default function Logs() {
                     >
                       <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem' }}>{formatTimestamp(log.timestamp)}</td>
                       <td className="data-preview" style={{ maxWidth: 300 }}>{log.query.length > 40 ? log.query.slice(0, 40) + '…' : log.query}</td>
+                      <td style={{ fontSize: '0.8rem', color: '#666' }}>{log.collection || '-'}</td>
                       <td style={{ textAlign: 'right' }}>{(log.elapsed_ms / 1000).toFixed(1)}s</td>
                       <td>{log.no_answer ? <span className="text-fail">Yes</span> : <span className="text-pass">No</span>}</td>
                     </tr>
@@ -142,6 +144,7 @@ export default function Logs() {
                 <tbody>
                   <tr><td>ID</td><td>{selected.id}</td></tr>
                   <tr><td>Timestamp</td><td>{formatTimestamp(selected.timestamp)}</td></tr>
+                  <tr><td>Collection</td><td>{selected.collection || '-'}</td></tr>
                   <tr><td>Model</td><td>{selected.model || '-'}</td></tr>
                   <tr><td>Elapsed</td><td>{(selected.elapsed_ms / 1000).toFixed(1)}s</td></tr>
                   <tr><td>No Answer</td><td>{selected.no_answer ? 'Yes' : 'No'}</td></tr>
