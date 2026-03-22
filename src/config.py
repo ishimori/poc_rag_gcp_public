@@ -56,7 +56,7 @@ class Config:
     user_groups: list[str] = ["all"]
 
     # Vertex AI Search
-    use_vertex_ai_search: bool = True
+    use_vertex_ai_search: bool = False
     vertex_search_engine_id: str = os.environ.get("VERTEX_SEARCH_ENGINE_ID", "")
     vertex_search_data_store_id: str = os.environ.get("VERTEX_SEARCH_DATA_STORE_ID", "")
 
