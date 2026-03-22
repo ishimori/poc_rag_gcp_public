@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 
+from src.config import config
 from src.evaluate.scorer import (
     EvalCase,
     EvalResult,
@@ -41,7 +42,7 @@ def run_case(eval_case: EvalCase) -> EvalResult:
             skipped_reason=f"requires: {eval_case.requires}",
         )
 
-    rag_result = rag_flow(eval_case.query)
+    rag_result = rag_flow(eval_case.query, user_groups=config.user_groups)
     answer = rag_result.answer
 
     # キーワード判定（参考値として常に実行）

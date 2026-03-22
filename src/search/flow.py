@@ -69,17 +69,21 @@ def rag_flow(
         print(f"  [VectorSearch] {len(search_results)} results")
 
     # Step 1.5: 権限除外検出（Shadow Retrieval）
-    if config.shadow_retrieval and config.permission_filter and user_groups and len(search_results) == 0:
+    # フィルタなし検索を実行し、フィルタあり検索との差分で権限除外を検出する
+    if config.shadow_retrieval and config.permission_filter and user_groups:
         shadow_results = vector_search(query, user_groups=None)
-        if len(shadow_results) > 0:
-            print("  [PermissionCheck] FILTERED_BY_PERMISSION — access denied")
+        # フィルタなし/ありで source_file の差分を比較
+        filtered_sources = {r.source_file for r in search_results}
+        shadow_sources = {r.source_file for r in shadow_results}
+        permission_filtered = shadow_sources - filtered_sources
+        if permission_filtered:
+            print(f"  [PermissionCheck] FILTERED_BY_PERMISSION — {permission_filtered}")
             return RAGResponse(
                 answer="この情報へのアクセス権限がありません。管理者にお問い合わせください。",
                 sources=[],
                 reranked_sources=[],
                 query=query,
             )
-        print("  [PermissionCheck] NO_MATCH — no documents found")
 
     # Step 2: リランキング
     reranked_results = rerank(query, search_results)
