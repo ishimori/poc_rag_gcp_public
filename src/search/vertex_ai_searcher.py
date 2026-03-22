@@ -40,6 +40,16 @@ def _get_client() -> discoveryengine.SearchServiceClient:
     return _client
 
 
+def _is_wikipedia(doc_data: dict) -> bool:
+    """GCSパスに 'wikipedia' を含むかでWikipedia文書を判定する"""
+    link = str(doc_data.get("link", ""))
+    return "wikipedia" in link.lower()
+
+
+# Wikipedia文書のスコア減衰係数（社内文書を優先するため）
+_WIKIPEDIA_PENALTY = 0.3
+
+
 def _extract_source_file(doc_data: dict) -> str:
     """Vertex AI Search のレスポンスからソースファイル名を抽出する"""
     link = str(doc_data.get("link", ""))
@@ -107,9 +117,14 @@ def vertex_ai_search(
     top_k: int | None = None,
     user_groups: list[str] | None = None,
 ) -> list[SearchResult]:
-    """Vertex AI Search で検索し、SearchResult のリストを返す"""
+    """Vertex AI Search で検索し、SearchResult のリストを返す
+
+    Wikipedia文書にはスコアペナルティを適用し、社内文書を優先する（メタデータ Boost）。
+    ペナルティ適用後にtop_kに絞るため、取得数を2倍にして候補を広く取る。
+    """
     client = _get_client()
     k = top_k or config.top_k
+    fetch_size = k * 2  # ペナルティ後の並び替えに備えて多めに取得
 
     # Engine ベースの serving_config を優先（engine_id があれば）
     if config.vertex_search_engine_id:
@@ -142,13 +157,14 @@ def vertex_ai_search(
     request = discoveryengine.SearchRequest(
         serving_config=serving_config,
         query=query,
-        page_size=k,
+        page_size=fetch_size,
         content_search_spec=content_search_spec,
     )
 
     response = client.search(request=request)
 
     results: list[SearchResult] = []
+    wiki_count = 0
     for i, result in enumerate(response.results):
         doc_data = dict(result.document.derived_struct_data)
         source_file = _extract_source_file(doc_data)
@@ -159,10 +175,16 @@ def vertex_ai_search(
             print(f"  [VertexAISearch] WARNING: empty content for {source_file}")
             continue
 
+        base_score = 1.0 / (i + 1)  # 順位ベースのスコア（1/rank）
+        is_wiki = _is_wikipedia(doc_data)
+        if is_wiki:
+            base_score *= _WIKIPEDIA_PENALTY
+            wiki_count += 1
+
         results.append(
             SearchResult(
                 content=content,
-                score=1.0 / (i + 1),  # 順位ベースのスコア（1/rank）
+                score=base_score,
                 source_file=source_file,
                 chunk_index=i,
                 category=metadata["category"],
@@ -170,5 +192,13 @@ def vertex_ai_search(
             )
         )
 
-    print(f"  [VertexAISearch] {len(results)} results for query: {query[:50]}...")
+    # ペナルティ適用後にスコア降順で並び替え、top_k に絞る
+    fetched = i + 1 if "i" in dir() else 0
+    results.sort(key=lambda r: r.score, reverse=True)
+    results = results[:k]
+
+    print(
+        f"  [VertexAISearch] {len(results)} results (fetched={fetched}, wiki_penalized={wiki_count})"
+        f" for query: {query[:50]}..."
+    )
     return results
