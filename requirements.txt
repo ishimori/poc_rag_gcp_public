@@ -3,3 +3,4 @@ google-cloud-firestore>=2.25.0
 vertexai>=1.0.0
 google-cloud-discoveryengine>=0.13.0
 python-dotenv>=1.1.0
+google-genai>=1.0.0
